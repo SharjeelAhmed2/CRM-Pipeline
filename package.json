@@ -1,0 +1,33 @@
+{
+  "name": "gmail-crm-extension",
+  "version": "1.0.0",
+  "description": "Gmail CRM Pipeline Extension",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SharjeelAhmed2/CRM-Pipeline.git"
+  },
+  "author": "Sharjeel",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SharjeelAhmed2/CRM-Pipeline/issues"
+  },
+  "homepage": "https://github.com/SharjeelAhmed2/CRM-Pipeline#readme",
+  "devDependencies": {
+    "@types/chrome": "^0.0.290",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "copy-webpack-plugin": "^12.0.2",
+    "react": "^18.2.0",
+    "react-beautiful-dnd": "^13.1.1",
+    "react-dom": "^18.2.0",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.7.2",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-merge": "^6.0.1"
+  }
+}
