@@ -3,6 +3,52 @@ console.log('Content script starting...');
 
 const GMAIL_URL_PATTERN = 'https://mail.google.com';
 
+// Define our stage type
+// For Sidebar
+interface PipelineStage {
+    id: string;
+    name: string;
+    color: string;
+}
+// Default stages
+const defaultStages: PipelineStage[] = [
+    { id: '1', name: 'Lead', color: '#718096' },
+    { id: '2', name: 'Pitched', color: '#4299E1' },
+    { id: '3', name: 'Waiting', color: '#9F7AEA' },
+    { id: '4', name: 'Closed', color: '#48BB78' }
+];
+function createStageElement(stage: PipelineStage) {
+    const stageDiv = document.createElement('div');
+    stageDiv.className = 'pipeline-stage';
+    stageDiv.style.cssText = `
+        margin-bottom: 10px;
+        padding: 10px;
+        background: white;
+        border-left: 4px solid ${stage.color};
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        cursor: pointer;
+        transition: all 0.2s;
+    `;
+    stageDiv.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span>${stage.name}</span>
+            <span class="stage-count">0</span>
+        </div>
+    `;
+    stageDiv.addEventListener('mouseover', () => {
+        stageDiv.style.backgroundColor = '#f7fafc';
+    });
+    stageDiv.addEventListener('mouseout', () => {
+        stageDiv.style.backgroundColor = 'white';
+    });
+    return stageDiv;
+}
+
+ /// For Add Stage Button Functionality 
+
+ 
+
 // For Sidebar
 function createSidebar() {
     const sidebar = document.createElement('div');
@@ -13,16 +59,51 @@ function createSidebar() {
         top: 0;
         width: 250px;
         height: 100vh;
-        background: white;
+        background: #f8fafc;
         box-shadow: -2px 0 5px rgba(0,0,0,0.1);
         z-index: 1000;
         padding: 20px;
+        overflow-y: auto;
     `;
     // Add title
     const title = document.createElement('h2');
     title.textContent = 'CRM Pipeline';
-    title.style.cssText = 'margin-bottom: 15px; font-weight: bold;';
+    title.style.cssText = 'margin-bottom: 15px; font-weight: bold; color: #2d3748;';
     sidebar.appendChild(title);
+ 
+    //Stages Work
+        // Get stages from storage or use defaults
+        //This is Chrome's storage API that syncs data across user's browsers
+        chrome.storage.sync.get(['pipelineStages'], (result) => {
+            const stages = result.pipelineStages || defaultStages;
+            
+            // Create stages container
+            const stagesContainer = document.createElement('div');
+            stagesContainer.id = 'pipeline-stages';
+            // stages.forEach(stage => {
+            //     stagesContainer.appendChild(createStageElement(stage));
+            // });
+            // Explicitly type the stage parameter
+            stages.forEach((stage: PipelineStage) => {
+                stagesContainer.appendChild(createStageElement(stage));
+            });
+            sidebar.appendChild(stagesContainer);
+            // Add "Add Stage" button
+            const addButton = document.createElement('button');
+            addButton.textContent = '+ Add Stage';
+            addButton.style.cssText = `
+                width: 100%;
+                padding: 8px;
+                background: #4299E1;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                margin-top: 10px;
+            `;
+            sidebar.appendChild(addButton);
+        });
+
     // Add to page
     document.body.appendChild(sidebar);
     
