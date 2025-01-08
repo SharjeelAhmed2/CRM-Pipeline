@@ -4,7 +4,8 @@
   "description": "Gmail CRM Pipeline Extension",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "webpack --watch --config webpack.dev.js",
+    "build": "webpack --config webpack.prod.js"
   },
   "repository": {
     "type": "git",
@@ -20,10 +21,16 @@
     "@types/chrome": "^0.0.290",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "autoprefixer": "^10.4.20",
     "copy-webpack-plugin": "^12.0.2",
+    "css-loader": "^7.1.2",
+    "postcss": "^8.4.49",
+    "postcss-loader": "^8.1.1",
     "react": "^18.2.0",
     "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^18.2.0",
+    "style-loader": "^4.0.0",
+    "tailwindcss": "^3.4.17",
     "ts-loader": "^9.5.1",
     "typescript": "^5.7.2",
     "webpack": "^5.97.1",
