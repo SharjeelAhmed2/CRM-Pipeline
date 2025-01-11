@@ -10,6 +10,14 @@ interface PipelineStage {
     name: string;
     color: string;
 }
+
+// For Email Data 
+interface EmailData {
+    id: string;
+    subject: string;
+    sender: string;
+    timestamp: string;
+}
 // Default stages
 const defaultStages: PipelineStage[] = [
     { id: '1', name: 'Lead', color: '#718096' },
@@ -18,18 +26,27 @@ const defaultStages: PipelineStage[] = [
     { id: '4', name: 'Closed', color: '#48BB78' }
 ];
 function createStageElement(stage: PipelineStage) {
+    console.log('Creating stage element:', stage.name);
     const stageDiv = document.createElement('div');
     stageDiv.className = 'pipeline-stage';
+    // Added for Email Drag and Drop 
+    stageDiv.setAttribute('data-stage-id', stage.id);
+
+    // Log the created stage
+    console.log('Stage created with ID:', stage.id);
+
+    // Add drop zone styling and handlers
     stageDiv.style.cssText = `
-        margin-bottom: 10px;
-        padding: 10px;
-        background: white;
-        border-left: 4px solid ${stage.color};
-        border-radius: 4px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        cursor: pointer;
-        transition: all 0.2s;
-    `;
+    margin-bottom: 10px;
+    padding: 10px;
+    background: white;
+    border-left: 4px solid ${stage.color};
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 50px;
+   `;
     // Further modifying it for remove Button 
     stageDiv.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -48,6 +65,7 @@ function createStageElement(stage: PipelineStage) {
         </div>
     `;
 
+    
         // Add delete functionality
         const deleteBtn = stageDiv.querySelector('.delete-stage');
         deleteBtn?.addEventListener('click', (e) => {
@@ -66,12 +84,38 @@ function createStageElement(stage: PipelineStage) {
         });
 
         
+    // Add drop zone event listeners
+    stageDiv.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        stageDiv.style.backgroundColor = '#f0f5ff';
+        console.log("It Moved")
+    });
+
+    stageDiv.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        stageDiv.style.backgroundColor = 'white';
+        console.log("It Left")
+    });
+
+    stageDiv.addEventListener('drop', (e) => {
+        e.preventDefault();
+        stageDiv.style.backgroundColor = 'white';
+        
+        try {
+            const emailData = JSON.parse(e.dataTransfer?.getData('text/plain') || '');
+            addEmailToStage(emailData, stage, stageDiv);
+        } catch (error) {
+            console.error('Error processing dropped email:', error);
+        }
+    });
+
     stageDiv.addEventListener('mouseover', () => {
         stageDiv.style.backgroundColor = '#f7fafc';
     });
     stageDiv.addEventListener('mouseout', () => {
         stageDiv.style.backgroundColor = 'white';
     });
+
     return stageDiv;
 }
 
@@ -191,20 +235,21 @@ function createStageElement(stage: PipelineStage) {
 
 // For Sidebar
 function createSidebar() {
+    console.log('Creating sidebar');
     const sidebar = document.createElement('div');
     sidebar.id = 'gmail-crm-sidebar';
     sidebar.style.cssText = `
-        position: fixed;
-        right: 0;
-        top: 0;
-        width: 250px;
-        height: 100vh;
-        background: #f8fafc;
-        box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-        z-index: 1000;
-        padding: 20px;
-        overflow-y: auto;
-    `;
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 250px;
+    height: 100vh;
+    background: #f8fafc;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    z-index: 1000;
+    padding: 20px;
+    overflow-y: auto;
+`;
     // Add title
     const title = document.createElement('h2');
     title.textContent = 'CRM Pipeline';
@@ -220,6 +265,7 @@ function createSidebar() {
             // Create stages container
             const stagesContainer = document.createElement('div');
             stagesContainer.id = 'pipeline-stages';
+            console.log('Created pipeline-stages container');
             // stages.forEach(stage => {
             //     stagesContainer.appendChild(createStageElement(stage));
             // });
@@ -255,21 +301,108 @@ function createSidebar() {
 
         gmailContent.style.marginRight = '250px' ;
     }
-
-  
 }
+
+// Add this new function to handle adding emails to stages
+    function addEmailToStage(emailData: EmailData, stage: PipelineStage, stageDiv: HTMLElement) {
+        const emailElement = document.createElement('div');
+        emailElement.className = 'pipeline-email';
+        emailElement.style.cssText = `
+            margin: 8px 0;
+            padding: 8px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 12px;
+        `;
+
+        emailElement.innerHTML = `
+            <div style="font-weight: bold;">${emailData.subject}</div>
+            <div style="color: #666;">${emailData.sender}</div>
+            <div style="color: #888; font-size: 11px;">${emailData.timestamp}</div>
+        `;
+
+        // Find or create the emails container in the stage
+        let emailsContainer = stageDiv.querySelector('.stage-emails');
+        if (!emailsContainer) {
+            emailsContainer = document.createElement('div');
+            emailsContainer.className = 'stage-emails';
+            stageDiv.appendChild(emailsContainer);
+        }
+
+        emailsContainer.appendChild(emailElement);
+        
+        // Update the count
+        const countElement = stageDiv.querySelector('.stage-count');
+        if (countElement) {
+            const currentCount = parseInt(countElement.textContent || '0');
+            countElement.textContent = (currentCount + 1).toString();
+        }
+
+        // Save to storage
+        saveEmailToStage(emailData, stage.id);
+    }
+
+    // 5:11 AM on Friday the 10th 
+    
+        // Add this function to save email data to storage
+    function saveEmailToStage(emailData: EmailData, stageId: string) {
+        chrome.storage.sync.get(['emailStages'], (result) => {
+            const emailStages = result.emailStages || {};
+            if (!emailStages[stageId]) {
+                emailStages[stageId] = [];
+            }
+            emailStages[stageId].push(emailData);
+            chrome.storage.sync.set({ emailStages });
+        });
+    }
+
+    /// Email Dragable Function
+
+    function makeEmailDraggable(emailRow: HTMLElement) {
+        console.log('Starting makeEmailDraggable for:', emailRow.querySelector('[role="link"]')?.textContent);
+        emailRow.setAttribute('draggable', 'true');
+        emailRow.style.cursor = 'grab'; // Set cursor immediately
+        // Add a visible drag handle to the email row
+        const dragHandle = document.createElement('div');
+        dragHandle.innerHTML = '⋮'; // Three dots indicating draggable
+        dragHandle.style.cssText = `
+            cursor: grab;
+            padding: 0 5px;
+            color: #666;
+            font-size: 16px;
+            display: inline-block;
+            vertical-align: middle;
+            user-select: none;
+        `;
+         console.log('Drag handle created');
+        // Insert the drag handle at the beginning of the email row
+        const firstCell = emailRow.querySelector('td');
+        if (firstCell) {
+            firstCell.insertBefore(dragHandle, firstCell.firstChild);
+ 	    console.log('Drag handle inserted into email row');
+        } 
+	else {
+        console.log('Failed to find first cell in email row');
+   	 }
+    
+
+    }
+
 
 function observeGmailInbox() {
     // Gmail's main content area usually has role="main"
     const targetNode = document.querySelector('[role="main"]');
     
     if (!targetNode) {
-        console.log('Gmail main content area not found, retrying...');
+        //console.log('Gmail main content area not found, retrying...');
+        console.log('🔍 Gmail main content area not found, retrying...');
         setTimeout(observeGmailInbox, 1000);
         return;
     }
 
-    console.log('Found Gmail main content area, setting up observer');
+    // console.log('Found Gmail main content area, setting up observer');
+    console.log('✅ Found Gmail main content area');
     createSidebar(); // Add sidebar when we find the main content
 
     // A MutationObserver is created to monitor changes in the DOM (Document Object Model) of the targetNode.
@@ -278,11 +411,22 @@ function observeGmailInbox() {
             // Look for email rows
             const emailRows = document.querySelectorAll('tr[role="row"]');
             if (emailRows.length > 0) {
-                console.log('Emails found:', emailRows.length);
+             //   console.log('Emails foundfffff:', emailRows.length);
+             console.log(`📧 Found ${emailRows.length} email rows`);
                 // We'll process these emails later
+                emailRows.forEach(row => {
+                // Makes Emails Draggeable 
+                if (!row.getAttribute('data-crm-initialized')) {
+                    const subject = row.querySelector('[role="link"]')?.textContent;
+                    console.log(`🎯 Making email draggable: ${subject?.slice(0, 30)}...`);
+                    makeEmailDraggable(row as HTMLElement);
+                    row.setAttribute('data-crm-initialized', 'true');
+                }
+            });
             }
         });
     });
+
 
     //Changes in child elements (childList: true).
     //Changes deep within the DOM tree (subtree: true).
