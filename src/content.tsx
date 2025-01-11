@@ -85,24 +85,30 @@ function createStageElement(stage: PipelineStage) {
 
         
     // Add drop zone event listeners
-    stageDiv.addEventListener('dragover', (e) => {
+       // Update drop zone event listeners
+       stageDiv.addEventListener('dragover', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         stageDiv.style.backgroundColor = '#f0f5ff';
-        console.log("It Moved")
+        console.log('Dragover event on stage:', stage.name);
     });
 
     stageDiv.addEventListener('dragleave', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         stageDiv.style.backgroundColor = 'white';
-        console.log("It Left")
+        console.log('Dragleave event on stage:', stage.name);
     });
 
     stageDiv.addEventListener('drop', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         stageDiv.style.backgroundColor = 'white';
+        console.log('Drop event on stage:', stage.name);
         
         try {
             const emailData = JSON.parse(e.dataTransfer?.getData('text/plain') || '');
+            console.log('Dropped email data:', emailData);
             addEmailToStage(emailData, stage, stageDiv);
         } catch (error) {
             console.error('Error processing dropped email:', error);
@@ -361,34 +367,153 @@ function createSidebar() {
 
     function makeEmailDraggable(emailRow: HTMLElement) {
         console.log('Starting makeEmailDraggable for:', emailRow.querySelector('[role="link"]')?.textContent);
+        
+        // Set draggable attribute
         emailRow.setAttribute('draggable', 'true');
-        emailRow.style.cursor = 'grab'; // Set cursor immediately
-        // Add a visible drag handle to the email row
-        const dragHandle = document.createElement('div');
-        dragHandle.innerHTML = '⋮'; // Three dots indicating draggable
-        dragHandle.style.cssText = `
-            cursor: grab;
-            padding: 0 5px;
-            color: #666;
-            font-size: 16px;
-            display: inline-block;
-            vertical-align: middle;
-            user-select: none;
+        emailRow.style.cursor = 'grab';
+    
+        // Create move button
+        const moveButton = document.createElement('button');
+        moveButton.innerHTML = '📋 Move';
+        moveButton.style.cssText = `
+            background: #4299E1;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-right: 8px;
+            display: none;
         `;
-         console.log('Drag handle created');
-        // Insert the drag handle at the beginning of the email row
+    
+        // Insert move button
         const firstCell = emailRow.querySelector('td');
         if (firstCell) {
-            firstCell.insertBefore(dragHandle, firstCell.firstChild);
- 	    console.log('Drag handle inserted into email row');
-        } 
-	else {
-        console.log('Failed to find first cell in email row');
-   	 }
+            firstCell.insertBefore(moveButton, firstCell.firstChild);
+            console.log('Move button inserted into email row');
+        }
     
-
+        // Add dragstart event listener
+        emailRow.addEventListener('dragstart', (e) => {
+            console.log('Drag started');
+            e.stopPropagation();
+            
+            const subject = emailRow.querySelector('[role="link"]')?.textContent || 'No subject';
+            const sender = emailRow.querySelector('[email]')?.getAttribute('email') || 'No sender';
+            const timestamp = emailRow.querySelector('[title]')?.getAttribute('title') || 'No date';
+    
+            const emailData: EmailData = {
+                id: Date.now().toString(),
+                subject,
+                sender,
+                timestamp
+            };
+    
+            e.dataTransfer?.setData('text/plain', JSON.stringify(emailData));
+            emailRow.style.opacity = '0.5';
+        });
+    
+        // Add dragend event listener
+        emailRow.addEventListener('dragend', (e) => {
+            console.log('Drag ended');
+            emailRow.style.opacity = '1';
+        });
+    
+        // Handle row selection and move button display
+        emailRow.addEventListener('click', function(e) {
+            console.log('Email row clicked');
+            // Use setTimeout to ensure this runs after Gmail's own click handlers
+            setTimeout(() => {
+                const isSelected = emailRow.getAttribute('aria-selected') === 'true';
+                moveButton.style.display = isSelected ? 'inline-block' : 'none';
+            }, 0);
+        });
+    
+        // Handle move button click
+        moveButton.addEventListener('click', (e) => {
+            console.log('Move button clicked');
+            e.stopPropagation();
+            e.preventDefault();
+    
+            const subject = emailRow.querySelector('[role="link"]')?.textContent || 'No subject';
+            const sender = emailRow.querySelector('[email]')?.getAttribute('email') || 'No sender';
+            const timestamp = emailRow.querySelector('[title]')?.getAttribute('title') || 'No date';
+    
+            const emailData: EmailData = {
+                id: Date.now().toString(),
+                subject,
+                sender,
+                timestamp
+            };
+    
+            showStageSelectionPopup(emailData, e.clientX, e.clientY);
+        });
     }
 
+    function showStageSelectionPopup(emailData: EmailData, x: number, y: number) {
+        // Create popup container
+        const popup = document.createElement('div');
+        popup.style.cssText = `
+            position: fixed;
+            left: ${x}px;
+            top: ${y}px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 8px;
+            z-index: 10000;
+        `;
+
+        // Get stages and create options
+        chrome.storage.sync.get(['pipelineStages'], (result) => {
+            const stages = result.pipelineStages || defaultStages;
+            
+            stages.forEach(stage => {
+                const option = document.createElement('div');
+                option.style.cssText = `
+                    padding: 8px 16px;
+                    cursor: pointer;
+                    border-left: 3px solid ${stage.color};
+                    margin: 4px 0;
+                `;
+                option.textContent = stage.name;
+
+                option.addEventListener('mouseover', () => {
+                    option.style.backgroundColor = '#f7fafc';
+                });
+
+                option.addEventListener('mouseout', () => {
+                    option.style.backgroundColor = 'white';
+                });
+
+                option.addEventListener('click', () => {
+                    // Find stage element
+                    const stageElement = document.querySelector(`[data-stage-id="${stage.id}"]`);
+                    if (stageElement) {
+                        addEmailToStage(emailData, stage, stageElement as HTMLElement);
+                    }
+                    document.body.removeChild(popup);
+                });
+
+                popup.appendChild(option);
+            });
+        });
+
+    // Close popup when clicking outside
+    const closePopup = (e: MouseEvent) => {
+        if (!popup.contains(e.target as Node)) {
+            document.body.removeChild(popup);
+            document.removeEventListener('click', closePopup);
+        }
+    };
+    
+    setTimeout(() => {
+        document.addEventListener('click', closePopup);
+    }, 0);
+
+    document.body.appendChild(popup);
+}
 
 function observeGmailInbox() {
     // Gmail's main content area usually has role="main"
