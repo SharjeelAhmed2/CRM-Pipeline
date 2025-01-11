@@ -86,29 +86,36 @@ function createStageElement(stage: PipelineStage) {
         
     // Add drop zone event listeners
        // Update drop zone event listeners
-       stageDiv.addEventListener('dragover', (e) => {
+       stageDiv.addEventListener('dragenter', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        console.log('Drag entered stage:', stage.name);
         stageDiv.style.backgroundColor = '#f0f5ff';
-        console.log('Dragover event on stage:', stage.name);
+    });
+
+    stageDiv.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Dragging over stage:', stage.name);
+        stageDiv.style.backgroundColor = '#f0f5ff';
     });
 
     stageDiv.addEventListener('dragleave', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        console.log('Drag left stage:', stage.name);
         stageDiv.style.backgroundColor = 'white';
-        console.log('Dragleave event on stage:', stage.name);
     });
 
     stageDiv.addEventListener('drop', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        stageDiv.style.backgroundColor = 'white';
         console.log('Drop event on stage:', stage.name);
-        
+        stageDiv.style.backgroundColor = 'white';
+
         try {
             const emailData = JSON.parse(e.dataTransfer?.getData('text/plain') || '');
-            console.log('Dropped email data:', emailData);
+            console.log('Processing dropped email:', emailData);
             addEmailToStage(emailData, stage, stageDiv);
         } catch (error) {
             console.error('Error processing dropped email:', error);
@@ -367,10 +374,6 @@ function createSidebar() {
 
     function makeEmailDraggable(emailRow: HTMLElement) {
         console.log('Starting makeEmailDraggable for:', emailRow.querySelector('[role="link"]')?.textContent);
-        
-        // Set draggable attribute
-        emailRow.setAttribute('draggable', 'true');
-        emailRow.style.cursor = 'grab';
     
         // Create move button
         const moveButton = document.createElement('button');
@@ -385,6 +388,8 @@ function createSidebar() {
             cursor: pointer;
             margin-right: 8px;
             display: none;
+            position: relative;
+            z-index: 1001;
         `;
     
         // Insert move button
@@ -394,11 +399,17 @@ function createSidebar() {
             console.log('Move button inserted into email row');
         }
     
-        // Add dragstart event listener
-        emailRow.addEventListener('dragstart', (e) => {
-            console.log('Drag started');
+        // Create a draggable helper element
+        let dragHelper: HTMLElement | null = null;
+    
+        // Make the move button draggable instead of the entire row
+        moveButton.setAttribute('draggable', 'true');
+        
+        moveButton.addEventListener('dragstart', (e) => {
+            console.log('Drag started from move button');
             e.stopPropagation();
-            
+    
+            // Create email data
             const subject = emailRow.querySelector('[role="link"]')?.textContent || 'No subject';
             const sender = emailRow.querySelector('[email]')?.getAttribute('email') || 'No sender';
             const timestamp = emailRow.querySelector('[title]')?.getAttribute('title') || 'No date';
@@ -410,14 +421,58 @@ function createSidebar() {
                 timestamp
             };
     
+            // Create visual drag helper
+            dragHelper = document.createElement('div');
+            dragHelper.style.cssText = `
+                position: fixed;
+                background: white;
+                padding: 10px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                pointer-events: none;
+                z-index: 10000;
+                width: 200px;
+            `;
+            dragHelper.innerHTML = `
+                <div style="font-weight: bold;">${subject}</div>
+                <div style="color: #666; font-size: 12px;">${sender}</div>
+            `;
+            document.body.appendChild(dragHelper);
+    
+            // Set drag data
             e.dataTransfer?.setData('text/plain', JSON.stringify(emailData));
-            emailRow.style.opacity = '0.5';
+            
+            // Set drag image
+            if (dragHelper) {
+                // Position off-screen initially
+                dragHelper.style.top = '-1000px';
+                dragHelper.style.left = '-1000px';
+                document.body.appendChild(dragHelper);
+                
+                // Use setTimeout to ensure the helper is rendered
+                setTimeout(() => {
+                    if (dragHelper && e.dataTransfer) {
+                        e.dataTransfer.setDragImage(dragHelper, 0, 0);
+                    }
+                }, 0);
+            }
         });
     
-        // Add dragend event listener
-        emailRow.addEventListener('dragend', (e) => {
+        moveButton.addEventListener('drag', (e) => {
+            console.log('Dragging in progress');
+            if (dragHelper) {
+                dragHelper.style.left = `${e.clientX + 10}px`;
+                dragHelper.style.top = `${e.clientY + 10}px`;
+            }
+        });
+    
+        moveButton.addEventListener('dragend', (e) => {
             console.log('Drag ended');
-            emailRow.style.opacity = '1';
+            if (dragHelper && dragHelper.parentNode) {
+                dragHelper.parentNode.removeChild(dragHelper);
+            }
+            dragHelper = null;
         });
     
         // Handle row selection and move button display
@@ -428,26 +483,6 @@ function createSidebar() {
                 const isSelected = emailRow.getAttribute('aria-selected') === 'true';
                 moveButton.style.display = isSelected ? 'inline-block' : 'none';
             }, 0);
-        });
-    
-        // Handle move button click
-        moveButton.addEventListener('click', (e) => {
-            console.log('Move button clicked');
-            e.stopPropagation();
-            e.preventDefault();
-    
-            const subject = emailRow.querySelector('[role="link"]')?.textContent || 'No subject';
-            const sender = emailRow.querySelector('[email]')?.getAttribute('email') || 'No sender';
-            const timestamp = emailRow.querySelector('[title]')?.getAttribute('title') || 'No date';
-    
-            const emailData: EmailData = {
-                id: Date.now().toString(),
-                subject,
-                sender,
-                timestamp
-            };
-    
-            showStageSelectionPopup(emailData, e.clientX, e.clientY);
         });
     }
 
