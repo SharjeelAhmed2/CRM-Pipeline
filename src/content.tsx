@@ -473,34 +473,76 @@ function createSidebar() {
             console.log('Move button inserted into email row');
         }
 
-        // Click handler for the move button
         moveButton.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             
             const getEmailData = (): EmailData | null => {
-                // Gmail-specific selectors for email data
-                const subject = emailRow.querySelector('.bqe')?.textContent?.trim() ||
-                              emailRow.querySelector('.y6')?.textContent?.trim();
+                // Get all table cells in the row
+                const cells = emailRow.querySelectorAll('td');
                 
-                const sender = emailRow.querySelector('.yX')?.getAttribute('email') ||
-                              emailRow.querySelector('.yP')?.textContent?.trim();
-                
-                const timestamp = emailRow.querySelector('.xW')?.querySelector('span')?.getAttribute('title') ||
-                                emailRow.querySelector('.xW')?.textContent?.trim();
+                // Find subject from the third cell typically
+                const subjectCell = Array.from(cells).find(cell => 
+                    cell.querySelector('[role="link"]') || 
+                    cell.querySelector('.bog') ||
+                    cell.querySelector('.bqe')
+                );
+                const subject = subjectCell?.textContent?.trim();
     
-                console.log('Extracted data:', { subject, sender, timestamp });
+                // Find sender from the relevant cell
+                // First try to find the email directly
+                let sender = emailRow.querySelector('[email]')?.getAttribute('email');
+                if (!sender) {
+                    // If no email attribute, try to get the sender name/email from text content
+                    const senderCell = Array.from(cells).find(cell => 
+                        cell.querySelector('.yP') || cell.querySelector('.bA4')
+                    );
+                    sender = senderCell?.textContent?.trim();
+                }
     
-                if (!subject || !sender || !timestamp) {
+                // Find timestamp from the last cell
+                const lastCell = cells[cells.length - 1];
+                const timeElement = lastCell?.querySelector('span[title]') || lastCell;
+                let timestamp = timeElement?.getAttribute('title') || 
+                                timeElement?.textContent?.trim();
+    
+                console.log('Raw extracted values:', {
+                    cells: cells.length,
+                    subject,
+                    sender,
+                    timestamp,
+                    rowHTML: emailRow.innerHTML
+                });
+    
+                // Clean up and validate the data
+                if (!subject || subject === '') {
+                    console.log('Missing subject');
                     return null;
                 }
     
-                return {
+                // Ensure we have some form of sender identification
+                if (!sender || sender === '') {
+                    // Try to get any sender information from the row
+                    const anyNameOrEmail = emailRow.textContent?.match(/[\w.-]+@[\w.-]+\.\w+/)?.[0];
+                    sender = anyNameOrEmail || 'Unknown Sender';
+                }
+    
+                // Ensure we have some form of timestamp
+                if (!timestamp || timestamp === '') {
+                    // Use current date as fallback
+                    const now = new Date();
+                    timestamp = now.toLocaleString();
+                }
+    
+                const emailData: EmailData = {
                     id: Date.now().toString(),
-                    subject,
-                    sender,
-                    timestamp
+                    subject: subject,
+                    sender: sender,
+                    timestamp: timestamp
                 };
+    
+                console.log('Final processed email data:', emailData);
+                return emailData;
             };
     
             const emailData = getEmailData();

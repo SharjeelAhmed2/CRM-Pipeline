@@ -299,29 +299,67 @@ function makeEmailDraggable(emailRow) {
         firstCell.insertBefore(moveButton, firstCell.firstChild);
         console.log('Move button inserted into email row');
     }
-    // Click handler for the move button
     moveButton.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
         var getEmailData = function () {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
-            // Gmail-specific selectors for email data
-            var subject = ((_b = (_a = emailRow.querySelector('.bqe')) === null || _a === void 0 ? void 0 : _a.textContent) === null || _b === void 0 ? void 0 : _b.trim()) ||
-                ((_d = (_c = emailRow.querySelector('.y6')) === null || _c === void 0 ? void 0 : _c.textContent) === null || _d === void 0 ? void 0 : _d.trim());
-            var sender = ((_e = emailRow.querySelector('.yX')) === null || _e === void 0 ? void 0 : _e.getAttribute('email')) ||
-                ((_g = (_f = emailRow.querySelector('.yP')) === null || _f === void 0 ? void 0 : _f.textContent) === null || _g === void 0 ? void 0 : _g.trim());
-            var timestamp = ((_j = (_h = emailRow.querySelector('.xW')) === null || _h === void 0 ? void 0 : _h.querySelector('span')) === null || _j === void 0 ? void 0 : _j.getAttribute('title')) ||
-                ((_l = (_k = emailRow.querySelector('.xW')) === null || _k === void 0 ? void 0 : _k.textContent) === null || _l === void 0 ? void 0 : _l.trim());
-            console.log('Extracted data:', { subject: subject, sender: sender, timestamp: timestamp });
-            if (!subject || !sender || !timestamp) {
+            var _a, _b, _c, _d, _e, _f;
+            // Get all table cells in the row
+            var cells = emailRow.querySelectorAll('td');
+            // Find subject from the third cell typically
+            var subjectCell = Array.from(cells).find(function (cell) {
+                return cell.querySelector('[role="link"]') ||
+                    cell.querySelector('.bog') ||
+                    cell.querySelector('.bqe');
+            });
+            var subject = (_a = subjectCell === null || subjectCell === void 0 ? void 0 : subjectCell.textContent) === null || _a === void 0 ? void 0 : _a.trim();
+            // Find sender from the relevant cell
+            // First try to find the email directly
+            var sender = (_b = emailRow.querySelector('[email]')) === null || _b === void 0 ? void 0 : _b.getAttribute('email');
+            if (!sender) {
+                // If no email attribute, try to get the sender name/email from text content
+                var senderCell = Array.from(cells).find(function (cell) {
+                    return cell.querySelector('.yP') || cell.querySelector('.bA4');
+                });
+                sender = (_c = senderCell === null || senderCell === void 0 ? void 0 : senderCell.textContent) === null || _c === void 0 ? void 0 : _c.trim();
+            }
+            // Find timestamp from the last cell
+            var lastCell = cells[cells.length - 1];
+            var timeElement = (lastCell === null || lastCell === void 0 ? void 0 : lastCell.querySelector('span[title]')) || lastCell;
+            var timestamp = (timeElement === null || timeElement === void 0 ? void 0 : timeElement.getAttribute('title')) ||
+                ((_d = timeElement === null || timeElement === void 0 ? void 0 : timeElement.textContent) === null || _d === void 0 ? void 0 : _d.trim());
+            console.log('Raw extracted values:', {
+                cells: cells.length,
+                subject: subject,
+                sender: sender,
+                timestamp: timestamp,
+                rowHTML: emailRow.innerHTML
+            });
+            // Clean up and validate the data
+            if (!subject || subject === '') {
+                console.log('Missing subject');
                 return null;
             }
-            return {
+            // Ensure we have some form of sender identification
+            if (!sender || sender === '') {
+                // Try to get any sender information from the row
+                var anyNameOrEmail = (_f = (_e = emailRow.textContent) === null || _e === void 0 ? void 0 : _e.match(/[\w.-]+@[\w.-]+\.\w+/)) === null || _f === void 0 ? void 0 : _f[0];
+                sender = anyNameOrEmail || 'Unknown Sender';
+            }
+            // Ensure we have some form of timestamp
+            if (!timestamp || timestamp === '') {
+                // Use current date as fallback
+                var now = new Date();
+                timestamp = now.toLocaleString();
+            }
+            var emailData = {
                 id: Date.now().toString(),
                 subject: subject,
                 sender: sender,
                 timestamp: timestamp
             };
+            console.log('Final processed email data:', emailData);
+            return emailData;
         };
         var emailData = getEmailData();
         if (emailData) {
