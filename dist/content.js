@@ -32,89 +32,52 @@ function createStageElement(stage) {
     console.log('Creating stage element:', stage.name);
     var stageDiv = document.createElement('div');
     stageDiv.className = 'pipeline-stage';
-    // Added for Email Drag and Drop 
     stageDiv.setAttribute('data-stage-id', stage.id);
-    // Log the created stage
-    console.log('Stage created with ID:', stage.id);
-    // Add drop zone styling and handlers
-    stageDiv.style.cssText = "\n    margin-bottom: 10px;\n    padding: 10px;\n    background: white;\n    border-left: 4px solid ".concat(stage.color, ";\n    border-radius: 4px;\n    box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n    cursor: pointer;\n    transition: all 0.2s;\n    min-height: 50px;\n   ");
-    // Further modifying it for remove Button 
-    stageDiv.innerHTML = "\n        <div style=\"display: flex; justify-content: space-between; align-items: center;\">\n            <span>".concat(stage.name, "</span>\n            <div style=\"display: flex; align-items: center; gap: 8px;\">\n            <span class=\"stage-count\">0</span>\n                            <button class=\"delete-stage\" style=\"\n                    background: none;\n                    border: none;\n                    color:rgb(255, 0, 0);\n                    cursor: pointer;\n                    font-size: 18px;\n                    padding: 0 4px;\n                \">\u00D7</button>\n            </div>\n        </div>\n    ");
+    stageDiv.style.cssText = "\n        margin-bottom: 10px;\n        background: white;\n        border-left: 4px solid ".concat(stage.color, ";\n        border-radius: 4px;\n        box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n    ");
+    // Create header section
+    var headerDiv = document.createElement('div');
+    headerDiv.style.cssText = "\n        padding: 10px;\n        display: flex;\n        justify-content: space-between;\n        align-items: center;\n        border-bottom: 1px solid #e2e8f0;\n    ";
+    headerDiv.innerHTML = "\n        <div style=\"display: flex; align-items: center;\">\n            <span style=\"font-weight: 500;\">".concat(stage.name, "</span>\n            <span class=\"stage-count\" style=\"margin-left: 8px; color: #666;\">0</span>\n        </div>\n        <button class=\"delete-stage\" style=\"\n            background: none;\n            border: none;\n            color: #ff4444;\n            cursor: pointer;\n            font-size: 18px;\n            padding: 0 4px;\n        \">\u00D7</button>\n    ");
+    // Create emails container
+    var emailsContainer = document.createElement('div');
+    emailsContainer.className = 'stage-emails-container';
+    emailsContainer.style.cssText = "\n        padding: 10px;\n        min-height: 30px;\n    ";
+    stageDiv.appendChild(headerDiv);
+    stageDiv.appendChild(emailsContainer);
     // Add delete functionality
-    var deleteBtn = stageDiv.querySelector('.delete-stage');
+    var deleteBtn = headerDiv.querySelector('.delete-stage');
     deleteBtn === null || deleteBtn === void 0 ? void 0 : deleteBtn.addEventListener('click', function (e) {
-        e.stopPropagation(); // Prevent stage click event
+        e.stopPropagation();
         if (confirm("Are you sure you want to delete \"".concat(stage.name, "\" stage?"))) {
-            // Remove from storage
             chrome.storage.sync.get(['pipelineStages'], function (result) {
                 var currentStages = result.pipelineStages || defaultStages;
                 var updatedStages = currentStages.filter(function (s) { return s.id !== stage.id; });
                 chrome.storage.sync.set({ pipelineStages: updatedStages }, function () {
-                    // Remove from UI
                     stageDiv.remove();
                 });
             });
         }
     });
-    // Add drop zone event listeners
-    // Update drop zone event listeners
-    stageDiv.addEventListener('dragenter', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('Drag entered stage:', stage.name);
-        stageDiv.style.backgroundColor = '#f0f5ff';
-    });
+    // Add drop zone handlers
     stageDiv.addEventListener('dragover', function (e) {
         e.preventDefault();
-        e.stopPropagation();
-        console.log('Dragging over stage:', stage.name);
-        stageDiv.style.backgroundColor = '#f0f5ff';
+        emailsContainer.style.backgroundColor = '#f7fafc';
     });
     stageDiv.addEventListener('dragleave', function (e) {
         e.preventDefault();
-        e.stopPropagation();
-        console.log('Drag left stage:', stage.name);
-        stageDiv.style.backgroundColor = 'white';
+        emailsContainer.style.backgroundColor = 'transparent';
     });
     stageDiv.addEventListener('drop', function (e) {
         var _a;
         e.preventDefault();
-        e.stopPropagation();
-        console.log('Drop event on stage:', stage.name);
-        stageDiv.style.backgroundColor = 'white';
+        emailsContainer.style.backgroundColor = 'transparent';
         try {
-            // Log the raw data first
-            var rawData = (_a = e.dataTransfer) === null || _a === void 0 ? void 0 : _a.getData('text/plain');
-            console.log('Raw dropped Datas:', rawData);
-            if (!rawData) {
-                throw new Error('No data received in drop event');
-            }
-            // In case of NayaPay testing
-            // const parts = rawData.split('/');
-            // const userId = parts[parts.indexOf('u') + 1];
-            // const mailboxType = parts[parts.length - 2].replace('#', '');
-            // const messageId = parts[parts.length - 1];
-            // // Construct JSON
-            // const emailData = {
-            //     userId: userId,
-            //     mailboxType: mailboxType,
-            //     messageId: messageId
-            // };
-            // console.log(emailData);
-            var emailData = JSON.parse(rawData);
-            console.log('Successfully parsed email data:', emailData);
+            var emailData = JSON.parse(((_a = e.dataTransfer) === null || _a === void 0 ? void 0 : _a.getData('text/plain')) || '');
             addEmailToStage(emailData, stage, stageDiv);
         }
         catch (error) {
             console.error('Error processing dropped email:', error);
-            // console.error('Error details:', error.message);
         }
-    });
-    stageDiv.addEventListener('mouseover', function () {
-        stageDiv.style.backgroundColor = '#f7fafc';
-    });
-    stageDiv.addEventListener('mouseout', function () {
-        stageDiv.style.backgroundColor = 'white';
     });
     return stageDiv;
 }
@@ -206,57 +169,67 @@ function createSidebar() {
     if (gmailContent) {
         gmailContent.style.marginRight = '250px';
     }
+    loadSavedEmails();
 }
 // Add this new function to handle adding emails to stages
 function addEmailToStage(emailData, stage, stageDiv) {
-    try {
-        var emailElement = document.createElement('div');
-        emailElement.className = 'pipeline-email';
-        emailElement.style.cssText = "\n            margin: 8px 0;\n            padding: 8px;\n            background: white;\n            border: 1px solid #e2e8f0;\n            border-radius: 4px;\n            font-size: 12px;\n        ";
-        emailElement.innerHTML = "\n            <div style=\"font-weight: bold;\">".concat(emailData.subject, "</div>\n            <div style=\"color: #666;\">").concat(emailData.sender, "</div>\n            <div style=\"color: #888; font-size: 11px;\">").concat(emailData.timestamp, "</div>\n        ");
-        // Find or create the emails container in the stage
-        var emailsContainer = stageDiv.querySelector('.stage-emails');
-        if (!emailsContainer) {
-            emailsContainer = document.createElement('div');
-            emailsContainer.className = 'stage-emails';
-            stageDiv.appendChild(emailsContainer);
-        }
-        emailsContainer.appendChild(emailElement);
-        // Update the count
-        var countElement = stageDiv.querySelector('.stage-count');
-        if (countElement) {
-            var currentCount = parseInt(countElement.textContent || '0');
-            countElement.textContent = (currentCount + 1).toString();
-        }
-        // Save to storage
-        saveEmailToStage(emailData, stage.id);
-        // Remove any existing popups using the safer method
-        var existingPopup = document.querySelector('.crm-stage-popup');
-        if (existingPopup) {
-            existingPopup.remove();
-        }
+    console.log('Adding email to stage:', stage.name, emailData);
+    var emailsContainer = stageDiv.querySelector('.stage-emails-container');
+    if (!emailsContainer) {
+        console.error('Emails container not found');
+        return;
     }
-    catch (error) {
-        console.error('Error adding email to stage:', error);
+    // Create email element
+    var emailDiv = document.createElement('div');
+    emailDiv.className = 'pipeline-email';
+    emailDiv.style.cssText = "\n        margin-bottom: 8px;\n        padding: 8px;\n        background-color: #ffffff;\n        border: 1px solid #e2e8f0;\n        border-radius: 4px;\n        font-size: 12px;\n        cursor: pointer;\n        transition: all 0.2s;\n    ";
+    // Create email content
+    var formattedDate = new Date(emailData.timestamp).toLocaleDateString();
+    emailDiv.innerHTML = "\n        <div style=\"margin-bottom: 4px; font-weight: 500; color: #2d3748;\">".concat(emailData.subject, "</div>\n        <div style=\"display: flex; justify-content: space-between; color: #718096;\">\n            <span>").concat(emailData.sender, "</span>\n            <span>").concat(formattedDate, "</span>\n        </div>\n    ");
+    // Add hover effect
+    emailDiv.addEventListener('mouseenter', function () {
+        emailDiv.style.backgroundColor = '#f7fafc';
+    });
+    emailDiv.addEventListener('mouseleave', function () {
+        emailDiv.style.backgroundColor = '#ffffff';
+    });
+    // Add to container
+    emailsContainer.appendChild(emailDiv);
+    // Update count
+    var countElement = stageDiv.querySelector('.stage-count');
+    if (countElement) {
+        var currentCount = parseInt(countElement.textContent || '0');
+        countElement.textContent = (currentCount + 1).toString();
     }
+    // Save to storage
+    chrome.storage.sync.get(['emailStages'], function (result) {
+        var emailStages = result.emailStages || {};
+        if (!emailStages[stage.id]) {
+            emailStages[stage.id] = [];
+        }
+        emailStages[stage.id].push(emailData);
+        chrome.storage.sync.set({ emailStages: emailStages }, function () {
+            console.log('Email saved to storage:', emailData);
+        });
+    });
 }
 // 5:11 AM on Friday the 10th 
 // Add this function to save email data to storage
 function saveEmailToStage(emailData, stageId) {
-    // Validate email data before saving
+    // Validate the data
     if (!emailData.subject || !emailData.sender || !emailData.timestamp) {
         console.error('Invalid email data:', emailData);
         return;
     }
+    // Save to Chrome storage
     chrome.storage.sync.get(['emailStages'], function (result) {
         var emailStages = result.emailStages || {};
         if (!emailStages[stageId]) {
             emailStages[stageId] = [];
         }
-        // Add email only if it's valid
         emailStages[stageId].push(emailData);
         chrome.storage.sync.set({ emailStages: emailStages }, function () {
-            console.log('Email successfully saved to stage:', stageId, emailData);
+            console.log('Email saved to stage:', stageId, emailData);
         });
     });
 }
@@ -302,6 +275,7 @@ function makeEmailDraggable(emailRow) {
     moveButton.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
+        console.log('Move button clicked');
         var getEmailData = function () {
             var _a, _b, _c, _d, _e, _f;
             // Get all table cells in the row
@@ -363,6 +337,7 @@ function makeEmailDraggable(emailRow) {
         };
         var emailData = getEmailData();
         if (emailData) {
+            console.log('Email data extracted:', emailData);
             showStageSelectionPopup(emailData, e.clientX, e.clientY);
         }
         else {
@@ -370,55 +345,54 @@ function makeEmailDraggable(emailRow) {
         }
     });
 }
+// Update the showStageSelectionPopup function to properly pass the data
+// Add debug logging to track the flow
 function showStageSelectionPopup(emailData, x, y) {
-    // Remove any existing popups first
-    var existingPopup = document.querySelector('.crm-stage-popup');
-    if (existingPopup) {
-        existingPopup.remove();
-    }
-    // Create popup container
+    console.log('Opening stage selection popup with data:', emailData);
     var popup = document.createElement('div');
-    popup.className = 'crm-stage-popup'; // Add a class for easy identification
-    popup.style.cssText = "\n            position: fixed;\n            left: ".concat(x, "px;\n            top: ").concat(y, "px;\n            background: white;\n            border-radius: 8px;\n            box-shadow: 0 2px 10px rgba(0,0,0,0.1);\n            padding: 8px;\n            z-index: 10000;\n        ");
-    // Get stages and create options
+    popup.className = 'stage-selection-popup';
+    popup.style.cssText = "\n        position: fixed;\n        left: ".concat(x, "px;\n        top: ").concat(y, "px;\n        background: white;\n        border-radius: 8px;\n        box-shadow: 0 2px 10px rgba(0,0,0,0.1);\n        padding: 8px;\n        z-index: 10000;\n    ");
     chrome.storage.sync.get(['pipelineStages'], function (result) {
+        console.log('Retrieved stages:', result.pipelineStages);
         var stages = result.pipelineStages || defaultStages;
         stages.forEach(function (stage) {
             var option = document.createElement('div');
-            option.style.cssText = "\n                    padding: 8px 16px;\n                    cursor: pointer;\n                    border-left: 3px solid ".concat(stage.color, ";\n                    margin: 4px 0;\n                ");
+            option.style.cssText = "\n                padding: 8px 16px;\n                cursor: pointer;\n                border-left: 3px solid ".concat(stage.color, ";\n                margin: 4px 0;\n            ");
             option.textContent = stage.name;
-            option.addEventListener('mouseover', function () {
-                option.style.backgroundColor = '#f7fafc';
-            });
-            option.addEventListener('mouseout', function () {
-                option.style.backgroundColor = 'white';
-            });
             option.addEventListener('click', function () {
-                // Find stage element
+                console.log('Stage selected:', stage.name);
                 var stageElement = document.querySelector("[data-stage-id=\"".concat(stage.id, "\"]"));
                 if (stageElement) {
+                    console.log('Found stage element, adding email');
                     addEmailToStage(emailData, stage, stageElement);
                 }
-                //document.body.removeChild(popup);
-                // Use safer removal method
+                else {
+                    console.error('Stage element not found:', stage.id);
+                }
                 popup.remove();
             });
             popup.appendChild(option);
         });
     });
-    // Close popup when clicking outside
-    function handleClickOutside(e) {
-        if (!popup.contains(e.target)) {
-            popup.remove();
-            document.removeEventListener('click', handleClickOutside);
-        }
-    }
-    // Delay adding the click listener to prevent immediate closure
-    setTimeout(function () {
-        document.addEventListener('click', handleClickOutside);
-    }, 100);
-    // Add popup to document
     document.body.appendChild(popup);
+}
+// Add this function to load saved emails when creating stages
+function loadSavedEmails() {
+    chrome.storage.sync.get(['emailStages'], function (result) {
+        var emailStages = result.emailStages || {};
+        Object.entries(emailStages).forEach(function (_a) {
+            var stageId = _a[0], emails = _a[1];
+            var stageElement = document.querySelector("[data-stage-id=\"".concat(stageId, "\"]"));
+            if (stageElement) {
+                var stage_1 = defaultStages.find(function (s) { return s.id === stageId; });
+                if (stage_1) {
+                    emails.forEach(function (email) {
+                        addEmailToStage(email, stage_1, stageElement);
+                    });
+                }
+            }
+        });
+    });
 }
 function observeGmailInbox() {
     console.log('Starting Gmail observer...');

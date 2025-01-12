@@ -12,6 +12,7 @@ interface PipelineStage {
 }
 
 // For Email Data 
+// Update the EmailData interface to match your extracted data structure
 interface EmailData {
     id: string;
     subject: string;
@@ -29,127 +30,88 @@ function createStageElement(stage: PipelineStage) {
     console.log('Creating stage element:', stage.name);
     const stageDiv = document.createElement('div');
     stageDiv.className = 'pipeline-stage';
-    // Added for Email Drag and Drop 
     stageDiv.setAttribute('data-stage-id', stage.id);
 
-    // Log the created stage
-    console.log('Stage created with ID:', stage.id);
-
-    // Add drop zone styling and handlers
     stageDiv.style.cssText = `
-    margin-bottom: 10px;
-    padding: 10px;
-    background: white;
-    border-left: 4px solid ${stage.color};
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    cursor: pointer;
-    transition: all 0.2s;
-    min-height: 50px;
-   `;
-    // Further modifying it for remove Button 
-    stageDiv.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span>${stage.name}</span>
-            <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="stage-count">0</span>
-                            <button class="delete-stage" style="
-                    background: none;
-                    border: none;
-                    color:rgb(255, 0, 0);
-                    cursor: pointer;
-                    font-size: 18px;
-                    padding: 0 4px;
-                ">×</button>
-            </div>
-        </div>
+        margin-bottom: 10px;
+        background: white;
+        border-left: 4px solid ${stage.color};
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     `;
 
+    // Create header section
+    const headerDiv = document.createElement('div');
+    headerDiv.style.cssText = `
+        padding: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #e2e8f0;
+    `;
     
-        // Add delete functionality
-        const deleteBtn = stageDiv.querySelector('.delete-stage');
-        deleteBtn?.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent stage click event
-            if (confirm(`Are you sure you want to delete "${stage.name}" stage?`)) {
-                // Remove from storage
-                chrome.storage.sync.get(['pipelineStages'], (result) => {
-                    const currentStages: PipelineStage[] = result.pipelineStages || defaultStages;
-                    const updatedStages = currentStages.filter(s => s.id !== stage.id);
-                    chrome.storage.sync.set({ pipelineStages: updatedStages }, () => {
-                        // Remove from UI
-                        stageDiv.remove();
-                    });
-                });
-            }
-        });
+    headerDiv.innerHTML = `
+        <div style="display: flex; align-items: center;">
+            <span style="font-weight: 500;">${stage.name}</span>
+            <span class="stage-count" style="margin-left: 8px; color: #666;">0</span>
+        </div>
+        <button class="delete-stage" style="
+            background: none;
+            border: none;
+            color: #ff4444;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0 4px;
+        ">×</button>
+    `;
 
-        
-    // Add drop zone event listeners
-       // Update drop zone event listeners
-       stageDiv.addEventListener('dragenter', (e) => {
-        e.preventDefault();
+    // Create emails container
+    const emailsContainer = document.createElement('div');
+    emailsContainer.className = 'stage-emails-container';
+    emailsContainer.style.cssText = `
+        padding: 10px;
+        min-height: 30px;
+    `;
+
+    stageDiv.appendChild(headerDiv);
+    stageDiv.appendChild(emailsContainer);
+
+    // Add delete functionality
+    const deleteBtn = headerDiv.querySelector('.delete-stage');
+    deleteBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
-        console.log('Drag entered stage:', stage.name);
-        stageDiv.style.backgroundColor = '#f0f5ff';
+        if (confirm(`Are you sure you want to delete "${stage.name}" stage?`)) {
+            chrome.storage.sync.get(['pipelineStages'], (result) => {
+                const currentStages = result.pipelineStages || defaultStages;
+                const updatedStages = currentStages.filter(s => s.id !== stage.id);
+                chrome.storage.sync.set({ pipelineStages: updatedStages }, () => {
+                    stageDiv.remove();
+                });
+            });
+        }
     });
 
+    // Add drop zone handlers
     stageDiv.addEventListener('dragover', (e) => {
         e.preventDefault();
-        e.stopPropagation();
-        console.log('Dragging over stage:', stage.name);
-        stageDiv.style.backgroundColor = '#f0f5ff';
+        emailsContainer.style.backgroundColor = '#f7fafc';
     });
 
     stageDiv.addEventListener('dragleave', (e) => {
         e.preventDefault();
-        e.stopPropagation();
-        console.log('Drag left stage:', stage.name);
-        stageDiv.style.backgroundColor = 'white';
+        emailsContainer.style.backgroundColor = 'transparent';
     });
 
     stageDiv.addEventListener('drop', (e) => {
         e.preventDefault();
-        e.stopPropagation();
-        console.log('Drop event on stage:', stage.name);
-        stageDiv.style.backgroundColor = 'white';
-
+        emailsContainer.style.backgroundColor = 'transparent';
+        
         try {
-            // Log the raw data first
-            const rawData = e.dataTransfer?.getData('text/plain');
-            console.log('Raw dropped Datas:', rawData);
-
-            if (!rawData) {
-                throw new Error('No data received in drop event');
-            }
-            // In case of NayaPay testing
-            // const parts = rawData.split('/');
-            // const userId = parts[parts.indexOf('u') + 1];
-            // const mailboxType = parts[parts.length - 2].replace('#', '');
-            // const messageId = parts[parts.length - 1];
-
-            // // Construct JSON
-            // const emailData = {
-            //     userId: userId,
-            //     mailboxType: mailboxType,
-            //     messageId: messageId
-            // };
-
-            // console.log(emailData);
-
-            const emailData = JSON.parse(rawData);
-            console.log('Successfully parsed email data:', emailData);
+            const emailData = JSON.parse(e.dataTransfer?.getData('text/plain') || '');
             addEmailToStage(emailData, stage, stageDiv);
         } catch (error) {
             console.error('Error processing dropped email:', error);
-           // console.error('Error details:', error.message);
         }
-    });
-
-    stageDiv.addEventListener('mouseover', () => {
-        stageDiv.style.backgroundColor = '#f7fafc';
-    });
-    stageDiv.addEventListener('mouseout', () => {
-        stageDiv.style.backgroundColor = 'white';
     });
 
     return stageDiv;
@@ -337,82 +299,98 @@ function createSidebar() {
 
         gmailContent.style.marginRight = '250px' ;
     }
+    loadSavedEmails();
 }
 
 // Add this new function to handle adding emails to stages
-    function addEmailToStage(emailData: EmailData, stage: PipelineStage, stageDiv: HTMLElement) {
-        try{
-        const emailElement = document.createElement('div');
-        emailElement.className = 'pipeline-email';
-        emailElement.style.cssText = `
-            margin: 8px 0;
-            padding: 8px;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 4px;
-            font-size: 12px;
-        `;
+function addEmailToStage(emailData: EmailData, stage: PipelineStage, stageDiv: HTMLElement) {
+    console.log('Adding email to stage:', stage.name, emailData);
 
-        emailElement.innerHTML = `
-            <div style="font-weight: bold;">${emailData.subject}</div>
-            <div style="color: #666;">${emailData.sender}</div>
-            <div style="color: #888; font-size: 11px;">${emailData.timestamp}</div>
-        `;
-
-        // Find or create the emails container in the stage
-        let emailsContainer = stageDiv.querySelector('.stage-emails');
-        if (!emailsContainer) {
-            emailsContainer = document.createElement('div');
-            emailsContainer.className = 'stage-emails';
-            stageDiv.appendChild(emailsContainer);
-        }
-
-        emailsContainer.appendChild(emailElement);
-        
-        // Update the count
-        const countElement = stageDiv.querySelector('.stage-count');
-        if (countElement) {
-            const currentCount = parseInt(countElement.textContent || '0');
-            countElement.textContent = (currentCount + 1).toString();
-        }
-
-        // Save to storage
-        saveEmailToStage(emailData, stage.id);
-
-                // Remove any existing popups using the safer method
-        const existingPopup = document.querySelector('.crm-stage-popup');
-        
-        if (existingPopup) {
-            existingPopup.remove();
-        }
-    } catch (error) {
-        console.error('Error adding email to stage:', error);
+    const emailsContainer = stageDiv.querySelector('.stage-emails-container');
+    if (!emailsContainer) {
+        console.error('Emails container not found');
+        return;
     }
+
+    // Create email element
+    const emailDiv = document.createElement('div');
+    emailDiv.className = 'pipeline-email';
+    emailDiv.style.cssText = `
+        margin-bottom: 8px;
+        padding: 8px;
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+    `;
+
+    // Create email content
+    const formattedDate = new Date(emailData.timestamp).toLocaleDateString();
+    emailDiv.innerHTML = `
+        <div style="margin-bottom: 4px; font-weight: 500; color: #2d3748;">${emailData.subject}</div>
+        <div style="display: flex; justify-content: space-between; color: #718096;">
+            <span>${emailData.sender}</span>
+            <span>${formattedDate}</span>
+        </div>
+    `;
+
+    // Add hover effect
+    emailDiv.addEventListener('mouseenter', () => {
+        emailDiv.style.backgroundColor = '#f7fafc';
+    });
+    emailDiv.addEventListener('mouseleave', () => {
+        emailDiv.style.backgroundColor = '#ffffff';
+    });
+
+    // Add to container
+    emailsContainer.appendChild(emailDiv);
+
+    // Update count
+    const countElement = stageDiv.querySelector('.stage-count');
+    if (countElement) {
+        const currentCount = parseInt(countElement.textContent || '0');
+        countElement.textContent = (currentCount + 1).toString();
+    }
+
+    // Save to storage
+    chrome.storage.sync.get(['emailStages'], (result) => {
+        const emailStages = result.emailStages || {};
+        if (!emailStages[stage.id]) {
+            emailStages[stage.id] = [];
+        }
+        emailStages[stage.id].push(emailData);
+        
+        chrome.storage.sync.set({ emailStages }, () => {
+            console.log('Email saved to storage:', emailData);
+        });
+    });
 }
 
     // 5:11 AM on Friday the 10th 
     
         // Add this function to save email data to storage
-    function saveEmailToStage(emailData: EmailData, stageId: string) {
-
-        // Validate email data before saving
-        if (!emailData.subject || !emailData.sender || !emailData.timestamp) {
-            console.error('Invalid email data:', emailData);
-            return;
-        }
-
-        chrome.storage.sync.get(['emailStages'], (result) => {
-            const emailStages = result.emailStages || {};
-            if (!emailStages[stageId]) {
-                emailStages[stageId] = [];
+        function saveEmailToStage(emailData: EmailData, stageId: string) {
+            // Validate the data
+            if (!emailData.subject || !emailData.sender || !emailData.timestamp) {
+                console.error('Invalid email data:', emailData);
+                return;
             }
-        // Add email only if it's valid
-        emailStages[stageId].push(emailData);
-        chrome.storage.sync.set({ emailStages }, () => {
-            console.log('Email successfully saved to stage:', stageId, emailData);
-        });
-        });
-    }
+        
+            // Save to Chrome storage
+            chrome.storage.sync.get(['emailStages'], (result) => {
+                const emailStages = result.emailStages || {};
+                if (!emailStages[stageId]) {
+                    emailStages[stageId] = [];
+                }
+                emailStages[stageId].push(emailData);
+                
+                chrome.storage.sync.set({ emailStages }, () => {
+                    console.log('Email saved to stage:', stageId, emailData);
+                });
+            });
+        }
 
     /// Email Dragable Function
 
@@ -476,7 +454,7 @@ function createSidebar() {
         moveButton.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            
+            console.log('Move button clicked');
             const getEmailData = (): EmailData | null => {
                 // Get all table cells in the row
                 const cells = emailRow.querySelectorAll('td');
@@ -547,6 +525,7 @@ function createSidebar() {
     
             const emailData = getEmailData();
             if (emailData) {
+                console.log('Email data extracted:', emailData);
                 showStageSelectionPopup(emailData, e.clientX, e.clientY);
             } else {
                 console.error('Failed to extract email data');
@@ -554,80 +533,73 @@ function createSidebar() {
         });
 }
 
-    function showStageSelectionPopup(emailData: EmailData, x: number, y: number) {
+// Update the showStageSelectionPopup function to properly pass the data
+// Add debug logging to track the flow
+function showStageSelectionPopup(emailData: EmailData, x: number, y: number) {
+    console.log('Opening stage selection popup with data:', emailData);
+    
+    const popup = document.createElement('div');
+    popup.className = 'stage-selection-popup';
+    popup.style.cssText = `
+        position: fixed;
+        left: ${x}px;
+        top: ${y}px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 8px;
+        z-index: 10000;
+    `;
 
-            // Remove any existing popups first
-        const existingPopup = document.querySelector('.crm-stage-popup');
-        if (existingPopup) {
-            existingPopup.remove();
-        }
+    chrome.storage.sync.get(['pipelineStages'], (result) => {
+        console.log('Retrieved stages:', result.pipelineStages);
+        const stages = result.pipelineStages || defaultStages;
+        
+        stages.forEach(stage => {
+            const option = document.createElement('div');
+            option.style.cssText = `
+                padding: 8px 16px;
+                cursor: pointer;
+                border-left: 3px solid ${stage.color};
+                margin: 4px 0;
+            `;
+            option.textContent = stage.name;
 
-        // Create popup container
-        const popup = document.createElement('div');
-        popup.className = 'crm-stage-popup'; // Add a class for easy identification
-        popup.style.cssText = `
-            position: fixed;
-            left: ${x}px;
-            top: ${y}px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 8px;
-            z-index: 10000;
-        `;
-
-        // Get stages and create options
-        chrome.storage.sync.get(['pipelineStages'], (result) => {
-            const stages = result.pipelineStages || defaultStages;
-            
-            stages.forEach(stage => {
-                const option = document.createElement('div');
-                option.style.cssText = `
-                    padding: 8px 16px;
-                    cursor: pointer;
-                    border-left: 3px solid ${stage.color};
-                    margin: 4px 0;
-                `;
-                option.textContent = stage.name;
-
-                option.addEventListener('mouseover', () => {
-                    option.style.backgroundColor = '#f7fafc';
-                });
-
-                option.addEventListener('mouseout', () => {
-                    option.style.backgroundColor = 'white';
-                });
-
-                option.addEventListener('click', () => {
-                    // Find stage element
-                    const stageElement = document.querySelector(`[data-stage-id="${stage.id}"]`);
-                    if (stageElement) {
-                        addEmailToStage(emailData, stage, stageElement as HTMLElement);
-                    }
-                    //document.body.removeChild(popup);
-                      // Use safer removal method
-                    popup.remove();
-                });
-
-                popup.appendChild(option);
+            option.addEventListener('click', () => {
+                console.log('Stage selected:', stage.name);
+                const stageElement = document.querySelector(`[data-stage-id="${stage.id}"]`);
+                if (stageElement) {
+                    console.log('Found stage element, adding email');
+                    addEmailToStage(emailData, stage, stageElement as HTMLElement);
+                } else {
+                    console.error('Stage element not found:', stage.id);
+                }
+                popup.remove();
             });
+
+            popup.appendChild(option);
         });
+    });
 
-    // Close popup when clicking outside
-    function handleClickOutside(e: MouseEvent) {
-        if (!popup.contains(e.target as Node)) {
-            popup.remove();
-            document.removeEventListener('click', handleClickOutside);
-        }
-    }
-
-    // Delay adding the click listener to prevent immediate closure
-    setTimeout(() => {
-        document.addEventListener('click', handleClickOutside);
-    }, 100);
-
-    // Add popup to document
     document.body.appendChild(popup);
+}
+// Add this function to load saved emails when creating stages
+function loadSavedEmails() {
+    chrome.storage.sync.get(['emailStages'], (result) => {
+        const emailStages = result.emailStages || {};
+        
+        Object.entries(emailStages).forEach(([stageId, emails]) => {
+            const stageElement = document.querySelector(`[data-stage-id="${stageId}"]`);
+            if (stageElement) {
+                const stage = defaultStages.find(s => s.id === stageId);
+                if (stage) {
+                    (emails as EmailData[]).forEach(email => {
+                        addEmailToStage(email, stage, stageElement as HTMLElement);
+                    });
+                }
+            }
+        });
+    });
 }
 
 function observeGmailInbox() {
