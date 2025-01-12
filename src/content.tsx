@@ -114,11 +114,34 @@ function createStageElement(stage: PipelineStage) {
         stageDiv.style.backgroundColor = 'white';
 
         try {
-            const emailData = JSON.parse(e.dataTransfer?.getData('text/plain') || '');
-            console.log('Processing dropped email:', emailData);
+            // Log the raw data first
+            const rawData = e.dataTransfer?.getData('text/plain');
+            console.log('Raw dropped Datas:', rawData);
+
+            if (!rawData) {
+                throw new Error('No data received in drop event');
+            }
+            // In case of NayaPay testing
+            // const parts = rawData.split('/');
+            // const userId = parts[parts.indexOf('u') + 1];
+            // const mailboxType = parts[parts.length - 2].replace('#', '');
+            // const messageId = parts[parts.length - 1];
+
+            // // Construct JSON
+            // const emailData = {
+            //     userId: userId,
+            //     mailboxType: mailboxType,
+            //     messageId: messageId
+            // };
+
+            // console.log(emailData);
+
+            const emailData = JSON.parse(rawData);
+            console.log('Successfully parsed email data:', emailData);
             addEmailToStage(emailData, stage, stageDiv);
         } catch (error) {
             console.error('Error processing dropped email:', error);
+           // console.error('Error details:', error.message);
         }
     });
 
@@ -248,7 +271,7 @@ function createStageElement(stage: PipelineStage) {
 
 // For Sidebar
 function createSidebar() {
-    console.log('Creating sidebar');
+    console.log('Creating sidebarfff');
     const sidebar = document.createElement('div');
     sidebar.id = 'gmail-crm-sidebar';
     sidebar.style.cssText = `
@@ -372,12 +395,35 @@ function createSidebar() {
 
     /// Email Dragable Function
 
-    function makeEmailDraggable(emailRow: HTMLElement) {
-        console.log('Starting makeEmailDraggable for:', emailRow.querySelector('[role="link"]')?.textContent);
-    
-        // Create move button
+    /*
+    The move button is now always created and positioned next to the checkbox
+    The button becomes visible on row hover instead of row selection
+    Added a simple icon (📋) to make it more compact
+    Added proper z-index to ensure the button stays above other elements
+    Added transition effects for smooth appearance/disappearance
+    Added checks to prevent duplicate buttons
+    Improved the initialization tracking
+    */
+
+
+    /**Simplified the selectors to better match Gmail's structure
+    Removed the opacity transition and hover effects (making buttons always visible)
+    Increased z-index to ensure buttons appear above Gmail's interface
+    Added more specific targeting for email elements
+    Added more debug logging
+    Fixed the observer logic
+    Added a delay after page load to ensure Gmail is fully initialized */
+
+   function makeEmailDraggable(emailRow: HTMLElement) {
+    // First, check if the button is already added
+    if (emailRow.querySelector('.crm-move-button')) {
+        return;
+    }
+
         const moveButton = document.createElement('button');
-        moveButton.innerHTML = '📋 Move';
+        moveButton.className = 'crm-move-button';
+        moveButton.innerHTML = '📋';
+        moveButton.title = 'Move to Pipeline';
         moveButton.style.cssText = `
             background: #4299E1;
             color: white;
@@ -387,104 +433,38 @@ function createSidebar() {
             font-size: 12px;
             cursor: pointer;
             margin-right: 8px;
-            display: none;
             position: relative;
-            z-index: 1001;
+            z-index: 9999;
+            display: inline-block;
+            opacity: 1;
         `;
-    
-        // Insert move button
-        const firstCell = emailRow.querySelector('td');
+
+        // Target the first TD which contains the checkbox
+        const firstCell = emailRow.querySelector('td:first-child');
         if (firstCell) {
+            // Insert at the beginning of the cell
             firstCell.insertBefore(moveButton, firstCell.firstChild);
             console.log('Move button inserted into email row');
         }
-    
-        // Create a draggable helper element
-        let dragHelper: HTMLElement | null = null;
-    
-        // Make the move button draggable instead of the entire row
-        moveButton.setAttribute('draggable', 'true');
-        
-        moveButton.addEventListener('dragstart', (e) => {
-            console.log('Drag started from move button');
+
+        // Click handler for the move button
+        moveButton.addEventListener('click', function(e) {
+            e.preventDefault();
             e.stopPropagation();
-    
-            // Create email data
-            const subject = emailRow.querySelector('[role="link"]')?.textContent || 'No subject';
-            const sender = emailRow.querySelector('[email]')?.getAttribute('email') || 'No sender';
-            const timestamp = emailRow.querySelector('[title]')?.getAttribute('title') || 'No date';
-    
+            console.log('Move button clicked');
+
             const emailData: EmailData = {
                 id: Date.now().toString(),
-                subject,
-                sender,
-                timestamp
+                subject: emailRow.querySelector('span[email]')?.closest('td')?.textContent?.trim() || 'No subject',
+                sender: emailRow.querySelector('span[email]')?.getAttribute('email') || 'No sender',
+                timestamp: emailRow.querySelector('time')?.getAttribute('datetime') || 
+                        emailRow.querySelector('td[role="gridcell"]:last-child')?.textContent || 'No date'
             };
-    
-            // Create visual drag helper
-            dragHelper = document.createElement('div');
-            dragHelper.style.cssText = `
-                position: fixed;
-                background: white;
-                padding: 10px;
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                pointer-events: none;
-                z-index: 10000;
-                width: 200px;
-            `;
-            dragHelper.innerHTML = `
-                <div style="font-weight: bold;">${subject}</div>
-                <div style="color: #666; font-size: 12px;">${sender}</div>
-            `;
-            document.body.appendChild(dragHelper);
-    
-            // Set drag data
-            e.dataTransfer?.setData('text/plain', JSON.stringify(emailData));
-            
-            // Set drag image
-            if (dragHelper) {
-                // Position off-screen initially
-                dragHelper.style.top = '-1000px';
-                dragHelper.style.left = '-1000px';
-                document.body.appendChild(dragHelper);
-                
-                // Use setTimeout to ensure the helper is rendered
-                setTimeout(() => {
-                    if (dragHelper && e.dataTransfer) {
-                        e.dataTransfer.setDragImage(dragHelper, 0, 0);
-                    }
-                }, 0);
-            }
+
+            console.log('Captured email data:', emailData);
+            showStageSelectionPopup(emailData, e.clientX, e.clientY);
         });
-    
-        moveButton.addEventListener('drag', (e) => {
-            console.log('Dragging in progress');
-            if (dragHelper) {
-                dragHelper.style.left = `${e.clientX + 10}px`;
-                dragHelper.style.top = `${e.clientY + 10}px`;
-            }
-        });
-    
-        moveButton.addEventListener('dragend', (e) => {
-            console.log('Drag ended');
-            if (dragHelper && dragHelper.parentNode) {
-                dragHelper.parentNode.removeChild(dragHelper);
-            }
-            dragHelper = null;
-        });
-    
-        // Handle row selection and move button display
-        emailRow.addEventListener('click', function(e) {
-            console.log('Email row clicked');
-            // Use setTimeout to ensure this runs after Gmail's own click handlers
-            setTimeout(() => {
-                const isSelected = emailRow.getAttribute('aria-selected') === 'true';
-                moveButton.style.display = isSelected ? 'inline-block' : 'none';
-            }, 0);
-        });
-    }
+}
 
     function showStageSelectionPopup(emailData: EmailData, x: number, y: number) {
         // Create popup container
@@ -551,51 +531,63 @@ function createSidebar() {
 }
 
 function observeGmailInbox() {
-    // Gmail's main content area usually has role="main"
-    const targetNode = document.querySelector('[role="main"]');
+    console.log('Starting Gmail observer...');
     
+    function initializeEmailRows() {
+        // Target the table body containing email rows
+        const emailContainer = document.querySelector('div[role="main"] tbody');
+        if (!emailContainer) {
+            console.log('Email container not found, retrying...');
+            setTimeout(initializeEmailRows, 1000);
+            return;
+        }
+
+        // Find all email rows
+        const emailRows = emailContainer.querySelectorAll('tr');
+        console.log(`Found ${emailRows.length} email rows`);
+
+        emailRows.forEach(row => {
+            if (!row.hasAttribute('data-crm-initialized')) {
+                makeEmailDraggable(row as HTMLElement);
+                row.setAttribute('data-crm-initialized', 'true');
+                console.log('Initialized email row');
+            }
+        });
+    }
+
+    // Initial setup
+    const targetNode = document.querySelector('[role="main"]');
     if (!targetNode) {
-        //console.log('Gmail main content area not found, retrying...');
-        console.log('🔍 Gmail main content area not found, retrying...');
+        console.log('Gmail main content area not found, retrying...');
         setTimeout(observeGmailInbox, 1000);
         return;
     }
 
-    // console.log('Found Gmail main content area, setting up observer');
-    console.log('✅ Found Gmail main content area');
-    createSidebar(); // Add sidebar when we find the main content
+    console.log('Found Gmail main content area');
+    createSidebar();
 
-    // A MutationObserver is created to monitor changes in the DOM (Document Object Model) of the targetNode.
+    // Create observer for dynamic content
     const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            // Look for email rows
-            const emailRows = document.querySelectorAll('tr[role="row"]');
-            if (emailRows.length > 0) {
-             //   console.log('Emails foundfffff:', emailRows.length);
-             console.log(`📧 Found ${emailRows.length} email rows`);
-                // We'll process these emails later
-                emailRows.forEach(row => {
-                // Makes Emails Draggeable 
-                if (!row.getAttribute('data-crm-initialized')) {
-                    const subject = row.querySelector('[role="link"]')?.textContent;
-                    console.log(`🎯 Making email draggable: ${subject?.slice(0, 30)}...`);
-                    makeEmailDraggable(row as HTMLElement);
-                    row.setAttribute('data-crm-initialized', 'true');
-                }
-            });
-            }
+        mutations.forEach(() => {
+            initializeEmailRows();
         });
     });
 
-
-    //Changes in child elements (childList: true).
-    //Changes deep within the DOM tree (subtree: true).
+    // Start observing
     observer.observe(targetNode, {
         childList: true,
         subtree: true
     });
+
+    // Initial call
+    initializeEmailRows();
 }
 
+// Add this to your initialization
+window.addEventListener('load', () => {
+    console.log('Page loaded, initializing CRM...');
+    setTimeout(observeGmailInbox, 1000); // Give Gmail a moment to set up
+});
 const init = () => {
     if (!window.location.origin.includes(GMAIL_URL_PATTERN)) {
         return;
