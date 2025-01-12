@@ -341,6 +341,7 @@ function createSidebar() {
 
 // Add this new function to handle adding emails to stages
     function addEmailToStage(emailData: EmailData, stage: PipelineStage, stageDiv: HTMLElement) {
+        try{
         const emailElement = document.createElement('div');
         emailElement.className = 'pipeline-email';
         emailElement.style.cssText = `
@@ -377,19 +378,39 @@ function createSidebar() {
 
         // Save to storage
         saveEmailToStage(emailData, stage.id);
+
+                // Remove any existing popups using the safer method
+        const existingPopup = document.querySelector('.crm-stage-popup');
+        
+        if (existingPopup) {
+            existingPopup.remove();
+        }
+    } catch (error) {
+        console.error('Error adding email to stage:', error);
     }
+}
 
     // 5:11 AM on Friday the 10th 
     
         // Add this function to save email data to storage
     function saveEmailToStage(emailData: EmailData, stageId: string) {
+
+        // Validate email data before saving
+        if (!emailData.subject || !emailData.sender || !emailData.timestamp) {
+            console.error('Invalid email data:', emailData);
+            return;
+        }
+
         chrome.storage.sync.get(['emailStages'], (result) => {
             const emailStages = result.emailStages || {};
             if (!emailStages[stageId]) {
                 emailStages[stageId] = [];
             }
-            emailStages[stageId].push(emailData);
-            chrome.storage.sync.set({ emailStages });
+        // Add email only if it's valid
+        emailStages[stageId].push(emailData);
+        chrome.storage.sync.set({ emailStages }, () => {
+            console.log('Email successfully saved to stage:', stageId, emailData);
+        });
         });
     }
 
@@ -415,6 +436,11 @@ function createSidebar() {
     Added a delay after page load to ensure Gmail is fully initialized */
 
    function makeEmailDraggable(emailRow: HTMLElement) {
+    // Verify this is actually an email row
+    if (!emailRow.classList.contains('zA')) {
+        console.log('Not an email row, skipping:', emailRow);
+        return;
+    }
     // First, check if the button is already added
     if (emailRow.querySelector('.crm-move-button')) {
         return;
@@ -451,24 +477,52 @@ function createSidebar() {
         moveButton.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Move button clicked');
-
-            const emailData: EmailData = {
-                id: Date.now().toString(),
-                subject: emailRow.querySelector('span[email]')?.closest('td')?.textContent?.trim() || 'No subject',
-                sender: emailRow.querySelector('span[email]')?.getAttribute('email') || 'No sender',
-                timestamp: emailRow.querySelector('time')?.getAttribute('datetime') || 
-                        emailRow.querySelector('td[role="gridcell"]:last-child')?.textContent || 'No date'
+            
+            const getEmailData = (): EmailData | null => {
+                // Gmail-specific selectors for email data
+                const subject = emailRow.querySelector('.bqe')?.textContent?.trim() ||
+                              emailRow.querySelector('.y6')?.textContent?.trim();
+                
+                const sender = emailRow.querySelector('.yX')?.getAttribute('email') ||
+                              emailRow.querySelector('.yP')?.textContent?.trim();
+                
+                const timestamp = emailRow.querySelector('.xW')?.querySelector('span')?.getAttribute('title') ||
+                                emailRow.querySelector('.xW')?.textContent?.trim();
+    
+                console.log('Extracted data:', { subject, sender, timestamp });
+    
+                if (!subject || !sender || !timestamp) {
+                    return null;
+                }
+    
+                return {
+                    id: Date.now().toString(),
+                    subject,
+                    sender,
+                    timestamp
+                };
             };
-
-            console.log('Captured email data:', emailData);
-            showStageSelectionPopup(emailData, e.clientX, e.clientY);
+    
+            const emailData = getEmailData();
+            if (emailData) {
+                showStageSelectionPopup(emailData, e.clientX, e.clientY);
+            } else {
+                console.error('Failed to extract email data');
+            }
         });
 }
 
     function showStageSelectionPopup(emailData: EmailData, x: number, y: number) {
+
+            // Remove any existing popups first
+        const existingPopup = document.querySelector('.crm-stage-popup');
+        if (existingPopup) {
+            existingPopup.remove();
+        }
+
         // Create popup container
         const popup = document.createElement('div');
+        popup.className = 'crm-stage-popup'; // Add a class for easy identification
         popup.style.cssText = `
             position: fixed;
             left: ${x}px;
@@ -508,7 +562,9 @@ function createSidebar() {
                     if (stageElement) {
                         addEmailToStage(emailData, stage, stageElement as HTMLElement);
                     }
-                    document.body.removeChild(popup);
+                    //document.body.removeChild(popup);
+                      // Use safer removal method
+                    popup.remove();
                 });
 
                 popup.appendChild(option);
@@ -516,17 +572,19 @@ function createSidebar() {
         });
 
     // Close popup when clicking outside
-    const closePopup = (e: MouseEvent) => {
+    function handleClickOutside(e: MouseEvent) {
         if (!popup.contains(e.target as Node)) {
-            document.body.removeChild(popup);
-            document.removeEventListener('click', closePopup);
+            popup.remove();
+            document.removeEventListener('click', handleClickOutside);
         }
-    };
-    
-    setTimeout(() => {
-        document.addEventListener('click', closePopup);
-    }, 0);
+    }
 
+    // Delay adding the click listener to prevent immediate closure
+    setTimeout(() => {
+        document.addEventListener('click', handleClickOutside);
+    }, 100);
+
+    // Add popup to document
     document.body.appendChild(popup);
 }
 
@@ -534,53 +592,50 @@ function observeGmailInbox() {
     console.log('Starting Gmail observer...');
     
     function initializeEmailRows() {
-        // Target the table body containing email rows
-        const emailContainer = document.querySelector('div[role="main"] tbody');
-        if (!emailContainer) {
-            console.log('Email container not found, retrying...');
-            setTimeout(initializeEmailRows, 1000);
-            return;
-        }
-
-        // Find all email rows
-        const emailRows = emailContainer.querySelectorAll('tr');
+        // Target only the table rows that contain actual emails
+        // Gmail uses 'zA' class for email rows
+        const emailRows = document.querySelectorAll('tr.zA');
         console.log(`Found ${emailRows.length} email rows`);
 
         emailRows.forEach(row => {
             if (!row.hasAttribute('data-crm-initialized')) {
                 makeEmailDraggable(row as HTMLElement);
                 row.setAttribute('data-crm-initialized', 'true');
-                console.log('Initialized email row');
+                console.log('Initialized email row with classes:', row.className);
             }
         });
     }
 
-    // Initial setup
-    const targetNode = document.querySelector('[role="main"]');
-    if (!targetNode) {
-        console.log('Gmail main content area not found, retrying...');
-        setTimeout(observeGmailInbox, 1000);
-        return;
-    }
+    // Update the target node to specifically watch the email list
+    const findEmailContainer = () => {
+        // Gmail's main content area where emails are listed
+        const targetNode = document.querySelector('.AO');
+        if (!targetNode) {
+            console.log('Gmail email container not found, retrying...');
+            setTimeout(findEmailContainer, 1000);
+            return;
+        }
 
-    console.log('Found Gmail main content area');
-    createSidebar();
+        console.log('Found Gmail email container');
+        createSidebar();
 
-    // Create observer for dynamic content
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach(() => {
-            initializeEmailRows();
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach(() => {
+                initializeEmailRows();
+            });
         });
-    });
 
-    // Start observing
-    observer.observe(targetNode, {
-        childList: true,
-        subtree: true
-    });
+        observer.observe(targetNode, {
+            childList: true,
+            subtree: true
+        });
 
-    // Initial call
-    initializeEmailRows();
+        // Initial call
+        initializeEmailRows();
+    };
+
+    // Start looking for the email container
+    findEmailContainer();
 }
 
 // Add this to your initialization

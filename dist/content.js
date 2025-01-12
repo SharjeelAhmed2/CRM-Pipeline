@@ -209,37 +209,55 @@ function createSidebar() {
 }
 // Add this new function to handle adding emails to stages
 function addEmailToStage(emailData, stage, stageDiv) {
-    var emailElement = document.createElement('div');
-    emailElement.className = 'pipeline-email';
-    emailElement.style.cssText = "\n            margin: 8px 0;\n            padding: 8px;\n            background: white;\n            border: 1px solid #e2e8f0;\n            border-radius: 4px;\n            font-size: 12px;\n        ";
-    emailElement.innerHTML = "\n            <div style=\"font-weight: bold;\">".concat(emailData.subject, "</div>\n            <div style=\"color: #666;\">").concat(emailData.sender, "</div>\n            <div style=\"color: #888; font-size: 11px;\">").concat(emailData.timestamp, "</div>\n        ");
-    // Find or create the emails container in the stage
-    var emailsContainer = stageDiv.querySelector('.stage-emails');
-    if (!emailsContainer) {
-        emailsContainer = document.createElement('div');
-        emailsContainer.className = 'stage-emails';
-        stageDiv.appendChild(emailsContainer);
+    try {
+        var emailElement = document.createElement('div');
+        emailElement.className = 'pipeline-email';
+        emailElement.style.cssText = "\n            margin: 8px 0;\n            padding: 8px;\n            background: white;\n            border: 1px solid #e2e8f0;\n            border-radius: 4px;\n            font-size: 12px;\n        ";
+        emailElement.innerHTML = "\n            <div style=\"font-weight: bold;\">".concat(emailData.subject, "</div>\n            <div style=\"color: #666;\">").concat(emailData.sender, "</div>\n            <div style=\"color: #888; font-size: 11px;\">").concat(emailData.timestamp, "</div>\n        ");
+        // Find or create the emails container in the stage
+        var emailsContainer = stageDiv.querySelector('.stage-emails');
+        if (!emailsContainer) {
+            emailsContainer = document.createElement('div');
+            emailsContainer.className = 'stage-emails';
+            stageDiv.appendChild(emailsContainer);
+        }
+        emailsContainer.appendChild(emailElement);
+        // Update the count
+        var countElement = stageDiv.querySelector('.stage-count');
+        if (countElement) {
+            var currentCount = parseInt(countElement.textContent || '0');
+            countElement.textContent = (currentCount + 1).toString();
+        }
+        // Save to storage
+        saveEmailToStage(emailData, stage.id);
+        // Remove any existing popups using the safer method
+        var existingPopup = document.querySelector('.crm-stage-popup');
+        if (existingPopup) {
+            existingPopup.remove();
+        }
     }
-    emailsContainer.appendChild(emailElement);
-    // Update the count
-    var countElement = stageDiv.querySelector('.stage-count');
-    if (countElement) {
-        var currentCount = parseInt(countElement.textContent || '0');
-        countElement.textContent = (currentCount + 1).toString();
+    catch (error) {
+        console.error('Error adding email to stage:', error);
     }
-    // Save to storage
-    saveEmailToStage(emailData, stage.id);
 }
 // 5:11 AM on Friday the 10th 
 // Add this function to save email data to storage
 function saveEmailToStage(emailData, stageId) {
+    // Validate email data before saving
+    if (!emailData.subject || !emailData.sender || !emailData.timestamp) {
+        console.error('Invalid email data:', emailData);
+        return;
+    }
     chrome.storage.sync.get(['emailStages'], function (result) {
         var emailStages = result.emailStages || {};
         if (!emailStages[stageId]) {
             emailStages[stageId] = [];
         }
+        // Add email only if it's valid
         emailStages[stageId].push(emailData);
-        chrome.storage.sync.set({ emailStages: emailStages });
+        chrome.storage.sync.set({ emailStages: emailStages }, function () {
+            console.log('Email successfully saved to stage:', stageId, emailData);
+        });
     });
 }
 /// Email Dragable Function
@@ -260,6 +278,11 @@ Added more debug logging
 Fixed the observer logic
 Added a delay after page load to ensure Gmail is fully initialized */
 function makeEmailDraggable(emailRow) {
+    // Verify this is actually an email row
+    if (!emailRow.classList.contains('zA')) {
+        console.log('Not an email row, skipping:', emailRow);
+        return;
+    }
     // First, check if the button is already added
     if (emailRow.querySelector('.crm-move-button')) {
         return;
@@ -278,24 +301,46 @@ function makeEmailDraggable(emailRow) {
     }
     // Click handler for the move button
     moveButton.addEventListener('click', function (e) {
-        var _a, _b, _c, _d, _e, _f;
         e.preventDefault();
         e.stopPropagation();
-        console.log('Move button clicked');
-        var emailData = {
-            id: Date.now().toString(),
-            subject: ((_c = (_b = (_a = emailRow.querySelector('span[email]')) === null || _a === void 0 ? void 0 : _a.closest('td')) === null || _b === void 0 ? void 0 : _b.textContent) === null || _c === void 0 ? void 0 : _c.trim()) || 'No subject',
-            sender: ((_d = emailRow.querySelector('span[email]')) === null || _d === void 0 ? void 0 : _d.getAttribute('email')) || 'No sender',
-            timestamp: ((_e = emailRow.querySelector('time')) === null || _e === void 0 ? void 0 : _e.getAttribute('datetime')) ||
-                ((_f = emailRow.querySelector('td[role="gridcell"]:last-child')) === null || _f === void 0 ? void 0 : _f.textContent) || 'No date'
+        var getEmailData = function () {
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
+            // Gmail-specific selectors for email data
+            var subject = ((_b = (_a = emailRow.querySelector('.bqe')) === null || _a === void 0 ? void 0 : _a.textContent) === null || _b === void 0 ? void 0 : _b.trim()) ||
+                ((_d = (_c = emailRow.querySelector('.y6')) === null || _c === void 0 ? void 0 : _c.textContent) === null || _d === void 0 ? void 0 : _d.trim());
+            var sender = ((_e = emailRow.querySelector('.yX')) === null || _e === void 0 ? void 0 : _e.getAttribute('email')) ||
+                ((_g = (_f = emailRow.querySelector('.yP')) === null || _f === void 0 ? void 0 : _f.textContent) === null || _g === void 0 ? void 0 : _g.trim());
+            var timestamp = ((_j = (_h = emailRow.querySelector('.xW')) === null || _h === void 0 ? void 0 : _h.querySelector('span')) === null || _j === void 0 ? void 0 : _j.getAttribute('title')) ||
+                ((_l = (_k = emailRow.querySelector('.xW')) === null || _k === void 0 ? void 0 : _k.textContent) === null || _l === void 0 ? void 0 : _l.trim());
+            console.log('Extracted data:', { subject: subject, sender: sender, timestamp: timestamp });
+            if (!subject || !sender || !timestamp) {
+                return null;
+            }
+            return {
+                id: Date.now().toString(),
+                subject: subject,
+                sender: sender,
+                timestamp: timestamp
+            };
         };
-        console.log('Captured email data:', emailData);
-        showStageSelectionPopup(emailData, e.clientX, e.clientY);
+        var emailData = getEmailData();
+        if (emailData) {
+            showStageSelectionPopup(emailData, e.clientX, e.clientY);
+        }
+        else {
+            console.error('Failed to extract email data');
+        }
     });
 }
 function showStageSelectionPopup(emailData, x, y) {
+    // Remove any existing popups first
+    var existingPopup = document.querySelector('.crm-stage-popup');
+    if (existingPopup) {
+        existingPopup.remove();
+    }
     // Create popup container
     var popup = document.createElement('div');
+    popup.className = 'crm-stage-popup'; // Add a class for easy identification
     popup.style.cssText = "\n            position: fixed;\n            left: ".concat(x, "px;\n            top: ").concat(y, "px;\n            background: white;\n            border-radius: 8px;\n            box-shadow: 0 2px 10px rgba(0,0,0,0.1);\n            padding: 8px;\n            z-index: 10000;\n        ");
     // Get stages and create options
     chrome.storage.sync.get(['pipelineStages'], function (result) {
@@ -316,66 +361,67 @@ function showStageSelectionPopup(emailData, x, y) {
                 if (stageElement) {
                     addEmailToStage(emailData, stage, stageElement);
                 }
-                document.body.removeChild(popup);
+                //document.body.removeChild(popup);
+                // Use safer removal method
+                popup.remove();
             });
             popup.appendChild(option);
         });
     });
     // Close popup when clicking outside
-    var closePopup = function (e) {
+    function handleClickOutside(e) {
         if (!popup.contains(e.target)) {
-            document.body.removeChild(popup);
-            document.removeEventListener('click', closePopup);
+            popup.remove();
+            document.removeEventListener('click', handleClickOutside);
         }
-    };
+    }
+    // Delay adding the click listener to prevent immediate closure
     setTimeout(function () {
-        document.addEventListener('click', closePopup);
-    }, 0);
+        document.addEventListener('click', handleClickOutside);
+    }, 100);
+    // Add popup to document
     document.body.appendChild(popup);
 }
 function observeGmailInbox() {
     console.log('Starting Gmail observer...');
     function initializeEmailRows() {
-        // Target the table body containing email rows
-        var emailContainer = document.querySelector('div[role="main"] tbody');
-        if (!emailContainer) {
-            console.log('Email container not found, retrying...');
-            setTimeout(initializeEmailRows, 1000);
-            return;
-        }
-        // Find all email rows
-        var emailRows = emailContainer.querySelectorAll('tr');
+        // Target only the table rows that contain actual emails
+        // Gmail uses 'zA' class for email rows
+        var emailRows = document.querySelectorAll('tr.zA');
         console.log("Found ".concat(emailRows.length, " email rows"));
         emailRows.forEach(function (row) {
             if (!row.hasAttribute('data-crm-initialized')) {
                 makeEmailDraggable(row);
                 row.setAttribute('data-crm-initialized', 'true');
-                console.log('Initialized email row');
+                console.log('Initialized email row with classes:', row.className);
             }
         });
     }
-    // Initial setup
-    var targetNode = document.querySelector('[role="main"]');
-    if (!targetNode) {
-        console.log('Gmail main content area not found, retrying...');
-        setTimeout(observeGmailInbox, 1000);
-        return;
-    }
-    console.log('Found Gmail main content area');
-    createSidebar();
-    // Create observer for dynamic content
-    var observer = new MutationObserver(function (mutations) {
-        mutations.forEach(function () {
-            initializeEmailRows();
+    // Update the target node to specifically watch the email list
+    var findEmailContainer = function () {
+        // Gmail's main content area where emails are listed
+        var targetNode = document.querySelector('.AO');
+        if (!targetNode) {
+            console.log('Gmail email container not found, retrying...');
+            setTimeout(findEmailContainer, 1000);
+            return;
+        }
+        console.log('Found Gmail email container');
+        createSidebar();
+        var observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function () {
+                initializeEmailRows();
+            });
         });
-    });
-    // Start observing
-    observer.observe(targetNode, {
-        childList: true,
-        subtree: true
-    });
-    // Initial call
-    initializeEmailRows();
+        observer.observe(targetNode, {
+            childList: true,
+            subtree: true
+        });
+        // Initial call
+        initializeEmailRows();
+    };
+    // Start looking for the email container
+    findEmailContainer();
 }
 // Add this to your initialization
 window.addEventListener('load', function () {
