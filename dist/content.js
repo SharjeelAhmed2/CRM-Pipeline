@@ -9,6 +9,42 @@
 /***/ (function() {
 
 
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
         if (ar || !(i in from)) {
@@ -28,23 +64,116 @@ var defaultStages = [
     { id: '3', name: 'Waiting', color: '#9F7AEA' },
     { id: '4', name: 'Closed', color: '#48BB78' }
 ];
+// Storage utility functions
+// Create the StorageUtils object with all storage-related functions
+var StorageUtils = {
+    // Helper function to compress email data
+    compressEmailData: function (email) {
+        return {
+            i: email.id,
+            s: email.subject.substring(0, 100),
+            f: email.sender.substring(0, 50),
+            t: email.timestamp
+        };
+    },
+    // Helper function to decompress email data
+    decompressEmailData: function (stored) {
+        return {
+            id: stored.i,
+            subject: stored.s,
+            sender: stored.f,
+            timestamp: stored.t
+        };
+    },
+    // Save email to stage function
+    saveEmailToStage: function (emailData, stageId) {
+        return __awaiter(this, void 0, void 0, function () {
+            var key, result, emails, error_1;
+            var _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _b.trys.push([0, 3, , 4]);
+                        key = "stage_".concat(stageId);
+                        return [4 /*yield*/, chrome.storage.local.get([key])];
+                    case 1:
+                        result = _b.sent();
+                        emails = result[key] || [];
+                        emails.push(emailData);
+                        if (emails.length > 50) {
+                            emails = emails.slice(-50);
+                        }
+                        return [4 /*yield*/, chrome.storage.local.set((_a = {}, _a[key] = emails, _a))];
+                    case 2:
+                        _b.sent();
+                        return [2 /*return*/, true];
+                    case 3:
+                        error_1 = _b.sent();
+                        console.error('Error saving email:', error_1);
+                        return [2 /*return*/, false];
+                    case 4: return [2 /*return*/];
+                }
+            });
+        });
+    },
+    // Load emails for a stage function
+    loadStageEmails: function (stageId) {
+        return __awaiter(this, void 0, void 0, function () {
+            var key, result, error_2;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        _a.trys.push([0, 2, , 3]);
+                        key = "stage_".concat(stageId);
+                        return [4 /*yield*/, chrome.storage.local.get([key])];
+                    case 1:
+                        result = _a.sent();
+                        return [2 /*return*/, result[key] || []];
+                    case 2:
+                        error_2 = _a.sent();
+                        console.error('Error loading emails:', error_2);
+                        return [2 /*return*/, []];
+                    case 3: return [2 /*return*/];
+                }
+            });
+        });
+    }
+};
+// Compress email data before storage
+function compressEmailData(email) {
+    return {
+        i: email.id,
+        s: email.subject.substring(0, 100), // Limit subject length
+        f: email.sender.substring(0, 50), // Limit sender length
+        t: email.timestamp
+    };
+}
+// Decompress email data for display
+function decompressEmailData(stored) {
+    return {
+        id: stored.i,
+        subject: stored.s,
+        sender: stored.f,
+        timestamp: stored.t
+    };
+}
+// Update the createStageElement function to match your UI
 function createStageElement(stage) {
-    console.log('Creating stage element:', stage.name);
     var stageDiv = document.createElement('div');
     stageDiv.className = 'pipeline-stage';
     stageDiv.setAttribute('data-stage-id', stage.id);
-    stageDiv.style.cssText = "\n        margin-bottom: 10px;\n        background: white;\n        border-left: 4px solid ".concat(stage.color, ";\n        border-radius: 4px;\n        box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n    ");
-    // Create header section
+    stageDiv.style.cssText = "\n        margin-bottom: 10px;\n        background: white;\n        border-radius: 4px;\n        box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n    ";
+    // Create the header with your existing UI structure
     var headerDiv = document.createElement('div');
-    headerDiv.style.cssText = "\n        padding: 10px;\n        display: flex;\n        justify-content: space-between;\n        align-items: center;\n        border-bottom: 1px solid #e2e8f0;\n    ";
-    headerDiv.innerHTML = "\n        <div style=\"display: flex; align-items: center;\">\n            <span style=\"font-weight: 500;\">".concat(stage.name, "</span>\n            <span class=\"stage-count\" style=\"margin-left: 8px; color: #666;\">0</span>\n        </div>\n        <button class=\"delete-stage\" style=\"\n            background: none;\n            border: none;\n            color: #ff4444;\n            cursor: pointer;\n            font-size: 18px;\n            padding: 0 4px;\n        \">\u00D7</button>\n    ");
-    // Create emails container
+    headerDiv.style.cssText = "\n        padding: 10px;\n        display: flex;\n        justify-content: space-between;\n        align-items: center;\n        border-left: 4px solid ".concat(stage.color, ";\n        border-radius: 4px;\n        background: white;\n    ");
+    headerDiv.innerHTML = "\n        <div style=\"display: flex; align-items: center; gap: 8px;\">\n            <span>".concat(stage.name, "</span>\n            <span class=\"stage-count\">0</span>\n        </div>\n        <button class=\"delete-stage\" style=\"\n            background: none;\n            border: none;\n            color: #ff4444;\n            cursor: pointer;\n            font-size: 18px;\n            padding: 0 4px;\n        \">\u00D7</button>\n    ");
+    // Create a container for emails that will appear below the header
     var emailsContainer = document.createElement('div');
     emailsContainer.className = 'stage-emails-container';
-    emailsContainer.style.cssText = "\n        padding: 10px;\n        min-height: 30px;\n    ";
+    emailsContainer.style.cssText = "\n        padding: 8px;\n        margin-top: 4px;\n        display: flex;\n        flex-direction: column;\n        gap: 8px;\n    ";
     stageDiv.appendChild(headerDiv);
     stageDiv.appendChild(emailsContainer);
-    // Add delete functionality
+    // Add existing delete functionality
     var deleteBtn = headerDiv.querySelector('.delete-stage');
     deleteBtn === null || deleteBtn === void 0 ? void 0 : deleteBtn.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -56,27 +185,6 @@ function createStageElement(stage) {
                     stageDiv.remove();
                 });
             });
-        }
-    });
-    // Add drop zone handlers
-    stageDiv.addEventListener('dragover', function (e) {
-        e.preventDefault();
-        emailsContainer.style.backgroundColor = '#f7fafc';
-    });
-    stageDiv.addEventListener('dragleave', function (e) {
-        e.preventDefault();
-        emailsContainer.style.backgroundColor = 'transparent';
-    });
-    stageDiv.addEventListener('drop', function (e) {
-        var _a;
-        e.preventDefault();
-        emailsContainer.style.backgroundColor = 'transparent';
-        try {
-            var emailData = JSON.parse(((_a = e.dataTransfer) === null || _a === void 0 ? void 0 : _a.getData('text/plain')) || '');
-            addEmailToStage(emailData, stage, stageDiv);
-        }
-        catch (error) {
-            console.error('Error processing dropped email:', error);
         }
     });
     return stageDiv;
@@ -129,110 +237,115 @@ function createAddStageForm() {
 }
 // For Sidebar
 function createSidebar() {
-    console.log('Creating sidebarfff');
-    var sidebar = document.createElement('div');
-    sidebar.id = 'gmail-crm-sidebar';
-    sidebar.style.cssText = "\n    position: fixed;\n    right: 0;\n    top: 0;\n    width: 250px;\n    height: 100vh;\n    background: #f8fafc;\n    box-shadow: -2px 0 5px rgba(0,0,0,0.1);\n    z-index: 1000;\n    padding: 20px;\n    overflow-y: auto;\n";
-    // Add title
-    var title = document.createElement('h2');
-    title.textContent = 'CRM Pipeline';
-    title.style.cssText = 'margin-bottom: 15px; font-weight: bold; color: #2d3748;';
-    sidebar.appendChild(title);
-    //Stages Work
-    // Get stages from storage or use defaults
-    //This is Chrome's storage API that syncs data across user's browsers
-    chrome.storage.sync.get(['pipelineStages'], function (result) {
-        var stages = result.pipelineStages || defaultStages;
-        // Create stages container
-        var stagesContainer = document.createElement('div');
-        stagesContainer.id = 'pipeline-stages';
-        console.log('Created pipeline-stages container');
-        // stages.forEach(stage => {
-        //     stagesContainer.appendChild(createStageElement(stage));
-        // });
-        // Explicitly type the stage parameter
-        stages.forEach(function (stage) {
-            stagesContainer.appendChild(createStageElement(stage));
+    return __awaiter(this, void 0, void 0, function () {
+        var sidebar, title, gmailContent;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    console.log('Creating sidebarfff');
+                    sidebar = document.createElement('div');
+                    sidebar.id = 'gmail-crm-sidebar';
+                    sidebar.style.cssText = "\n    position: fixed;\n    right: 0;\n    top: 0;\n    width: 250px;\n    height: 100vh;\n    background: #f8fafc;\n    box-shadow: -2px 0 5px rgba(0,0,0,0.1);\n    z-index: 1000;\n    padding: 20px;\n    overflow-y: auto;\n";
+                    title = document.createElement('h2');
+                    title.textContent = 'CRM Pipeline';
+                    title.style.cssText = 'margin-bottom: 15px; font-weight: bold; color: #2d3748;';
+                    sidebar.appendChild(title);
+                    //Stages Work
+                    // Get stages from storage or use defaults
+                    //This is Chrome's storage API that syncs data across user's browsers
+                    chrome.storage.sync.get(['pipelineStages'], function (result) {
+                        var stages = result.pipelineStages || defaultStages;
+                        // Create stages container
+                        var stagesContainer = document.createElement('div');
+                        stagesContainer.id = 'pipeline-stages';
+                        console.log('Created pipeline-stages container');
+                        // stages.forEach(stage => {
+                        //     stagesContainer.appendChild(createStageElement(stage));
+                        // });
+                        // Explicitly type the stage parameter
+                        stages.forEach(function (stage) {
+                            stagesContainer.appendChild(createStageElement(stage));
+                        });
+                        sidebar.appendChild(stagesContainer);
+                        // Add "Add Stage" button
+                        var addButton = document.createElement('button');
+                        addButton.textContent = '+ Add Stage';
+                        addButton.style.cssText = "\n            width: 100%;\n            padding: 8px;\n            background: #4299E1;\n            color: white;\n            border: none;\n            border-radius: 4px;\n            cursor: pointer;\n            margin-top: 10px;\n        ";
+                        addButton.addEventListener('click', createAddStageForm);
+                        sidebar.appendChild(addButton);
+                    });
+                    // Add to page
+                    document.body.appendChild(sidebar);
+                    gmailContent = document.querySelector('.bkK');
+                    if (gmailContent) {
+                        gmailContent.style.marginRight = '250px';
+                    }
+                    return [4 /*yield*/, loadSavedEmails()];
+                case 1:
+                    _a.sent();
+                    return [2 /*return*/];
+            }
         });
-        sidebar.appendChild(stagesContainer);
-        // Add "Add Stage" button
-        var addButton = document.createElement('button');
-        addButton.textContent = '+ Add Stage';
-        addButton.style.cssText = "\n            width: 100%;\n            padding: 8px;\n            background: #4299E1;\n            color: white;\n            border: none;\n            border-radius: 4px;\n            cursor: pointer;\n            margin-top: 10px;\n        ";
-        addButton.addEventListener('click', createAddStageForm);
-        sidebar.appendChild(addButton);
     });
-    // Add to page
-    document.body.appendChild(sidebar);
-    // Adjust Gmail's main content
-    var gmailContent = document.querySelector('.bkK');
-    if (gmailContent) {
-        gmailContent.style.marginRight = '250px';
-    }
-    loadSavedEmails();
 }
 // Add this new function to handle adding emails to stages
+// Update addEmailToStage function to match your UI
 function addEmailToStage(emailData, stage, stageDiv) {
-    console.log('Adding email to stage:', stage.name, emailData);
-    var emailsContainer = stageDiv.querySelector('.stage-emails-container');
-    if (!emailsContainer) {
-        console.error('Emails container not found');
-        return;
-    }
-    // Create email element
-    var emailDiv = document.createElement('div');
-    emailDiv.className = 'pipeline-email';
-    emailDiv.style.cssText = "\n        margin-bottom: 8px;\n        padding: 8px;\n        background-color: #ffffff;\n        border: 1px solid #e2e8f0;\n        border-radius: 4px;\n        font-size: 12px;\n        cursor: pointer;\n        transition: all 0.2s;\n    ";
-    // Create email content
-    var formattedDate = new Date(emailData.timestamp).toLocaleDateString();
-    emailDiv.innerHTML = "\n        <div style=\"margin-bottom: 4px; font-weight: 500; color: #2d3748;\">".concat(emailData.subject, "</div>\n        <div style=\"display: flex; justify-content: space-between; color: #718096;\">\n            <span>").concat(emailData.sender, "</span>\n            <span>").concat(formattedDate, "</span>\n        </div>\n    ");
-    // Add hover effect
-    emailDiv.addEventListener('mouseenter', function () {
-        emailDiv.style.backgroundColor = '#f7fafc';
-    });
-    emailDiv.addEventListener('mouseleave', function () {
-        emailDiv.style.backgroundColor = '#ffffff';
-    });
-    // Add to container
-    emailsContainer.appendChild(emailDiv);
-    // Update count
-    var countElement = stageDiv.querySelector('.stage-count');
-    if (countElement) {
-        var currentCount = parseInt(countElement.textContent || '0');
-        countElement.textContent = (currentCount + 1).toString();
-    }
-    // Save to storage
-    chrome.storage.sync.get(['emailStages'], function (result) {
-        var emailStages = result.emailStages || {};
-        if (!emailStages[stage.id]) {
-            emailStages[stage.id] = [];
-        }
-        emailStages[stage.id].push(emailData);
-        chrome.storage.sync.set({ emailStages: emailStages }, function () {
-            console.log('Email saved to storage:', emailData);
+    return __awaiter(this, void 0, void 0, function () {
+        var saved, emailsContainer, emailDiv_1, timestamp, formattedDate, countElement, currentCount, error_3;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    console.log('Adding email to stage:', stage.name, emailData);
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, StorageUtils.saveEmailToStage(emailData, stage.id)];
+                case 2:
+                    saved = _a.sent();
+                    if (!saved) {
+                        console.error('Failed to save email');
+                        return [2 /*return*/];
+                    }
+                    emailsContainer = stageDiv.querySelector('.stage-emails-container');
+                    if (!emailsContainer) {
+                        console.error('Emails container not found');
+                        return [2 /*return*/];
+                    }
+                    emailDiv_1 = document.createElement('div');
+                    emailDiv_1.className = 'pipeline-email';
+                    emailDiv_1.style.cssText = "\n        background: white;\n        border: 1px solid #e2e8f0;\n        border-radius: 4px;\n        padding: 8px;\n        margin-top: 4px;\n        cursor: pointer;\n        font-size: 13px;\n    ";
+                    timestamp = new Date(emailData.timestamp);
+                    formattedDate = timestamp.toLocaleString();
+                    // Set email content
+                    emailDiv_1.innerHTML = "\n        <div style=\"display: flex; justify-content: space-between; align-items: start;\">\n            <div style=\"flex-grow: 1;\">\n                <div style=\"font-weight: 500; margin-bottom: 4px; color: #2d3748;\">".concat(emailData.subject, "</div>\n                <div style=\"color: #718096; font-size: 12px;\">").concat(emailData.sender, "</div>\n            </div>\n            <div style=\"color: #a0aec0; font-size: 11px; white-space: nowrap;\">\n                ").concat(formattedDate, "\n            </div>\n        </div>\n    ");
+                    // Add hover effect
+                    emailDiv_1.addEventListener('mouseenter', function () {
+                        emailDiv_1.style.backgroundColor = '#f7fafc';
+                    });
+                    emailDiv_1.addEventListener('mouseleave', function () {
+                        emailDiv_1.style.backgroundColor = 'white';
+                    });
+                    // Add to container
+                    emailsContainer.appendChild(emailDiv_1);
+                    countElement = stageDiv.querySelector('.stage-count');
+                    if (countElement) {
+                        currentCount = parseInt(countElement.textContent || '0');
+                        countElement.textContent = (currentCount + 1).toString();
+                    }
+                    return [3 /*break*/, 4];
+                case 3:
+                    error_3 = _a.sent();
+                    console.error('Error in addEmailToStage:', error_3);
+                    return [3 /*break*/, 4];
+                case 4: return [2 /*return*/];
+            }
         });
     });
 }
 // 5:11 AM on Friday the 10th 
 // Add this function to save email data to storage
-function saveEmailToStage(emailData, stageId) {
-    // Validate the data
-    if (!emailData.subject || !emailData.sender || !emailData.timestamp) {
-        console.error('Invalid email data:', emailData);
-        return;
-    }
-    // Save to Chrome storage
-    chrome.storage.sync.get(['emailStages'], function (result) {
-        var emailStages = result.emailStages || {};
-        if (!emailStages[stageId]) {
-            emailStages[stageId] = [];
-        }
-        emailStages[stageId].push(emailData);
-        chrome.storage.sync.set({ emailStages: emailStages }, function () {
-            console.log('Email saved to stage:', stageId, emailData);
-        });
-    });
-}
+// Update saveEmailToStage to include better error handling
 /// Email Dragable Function
 /*
 The move button is now always created and positioned next to the checkbox
@@ -348,6 +461,7 @@ function makeEmailDraggable(emailRow) {
 // Update the showStageSelectionPopup function to properly pass the data
 // Add debug logging to track the flow
 function showStageSelectionPopup(emailData, x, y) {
+    var _this = this;
     console.log('Opening stage selection popup with data:', emailData);
     var popup = document.createElement('div');
     popup.className = 'stage-selection-popup';
@@ -359,37 +473,78 @@ function showStageSelectionPopup(emailData, x, y) {
             var option = document.createElement('div');
             option.style.cssText = "\n                padding: 8px 16px;\n                cursor: pointer;\n                border-left: 3px solid ".concat(stage.color, ";\n                margin: 4px 0;\n            ");
             option.textContent = stage.name;
-            option.addEventListener('click', function () {
-                console.log('Stage selected:', stage.name);
-                var stageElement = document.querySelector("[data-stage-id=\"".concat(stage.id, "\"]"));
-                if (stageElement) {
-                    console.log('Found stage element, adding email');
-                    addEmailToStage(emailData, stage, stageElement);
-                }
-                else {
-                    console.error('Stage element not found:', stage.id);
-                }
-                popup.remove();
-            });
+            option.addEventListener('click', function () { return __awaiter(_this, void 0, void 0, function () {
+                var stageElement;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            stageElement = document.querySelector("[data-stage-id=\"".concat(stage.id, "\"]"));
+                            if (!stageElement) return [3 /*break*/, 2];
+                            return [4 /*yield*/, StorageUtils.saveEmailToStage(emailData, stage.id)];
+                        case 1:
+                            _a.sent();
+                            addEmailToStage(emailData, stage, stageElement);
+                            _a.label = 2;
+                        case 2:
+                            popup.remove();
+                            return [2 /*return*/];
+                    }
+                });
+            }); });
             popup.appendChild(option);
         });
     });
     document.body.appendChild(popup);
 }
 // Add this function to load saved emails when creating stages
+// Update loadSavedEmails function
+// Update the loadSavedEmails function to use StorageUtils
 function loadSavedEmails() {
-    chrome.storage.sync.get(['emailStages'], function (result) {
-        var emailStages = result.emailStages || {};
-        Object.entries(emailStages).forEach(function (_a) {
-            var stageId = _a[0], emails = _a[1];
-            var stageElement = document.querySelector("[data-stage-id=\"".concat(stageId, "\"]"));
-            if (stageElement) {
-                var stage_1 = defaultStages.find(function (s) { return s.id === stageId; });
-                if (stage_1) {
-                    emails.forEach(function (email) {
-                        addEmailToStage(email, stage_1, stageElement);
-                    });
-                }
+    return __awaiter(this, void 0, void 0, function () {
+        var stages, currentStages, _loop_1, _i, currentStages_1, stage, error_4;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 6, , 7]);
+                    return [4 /*yield*/, chrome.storage.sync.get(['pipelineStages'])];
+                case 1:
+                    stages = _a.sent();
+                    currentStages = stages.pipelineStages || defaultStages;
+                    _loop_1 = function (stage) {
+                        var emails, stageElement;
+                        return __generator(this, function (_b) {
+                            switch (_b.label) {
+                                case 0: return [4 /*yield*/, StorageUtils.loadStageEmails(stage.id)];
+                                case 1:
+                                    emails = _b.sent();
+                                    stageElement = document.querySelector("[data-stage-id=\"".concat(stage.id, "\"]"));
+                                    if (stageElement) {
+                                        emails.forEach(function (email) {
+                                            addEmailToStage(email, stage, stageElement);
+                                        });
+                                    }
+                                    return [2 /*return*/];
+                            }
+                        });
+                    };
+                    _i = 0, currentStages_1 = currentStages;
+                    _a.label = 2;
+                case 2:
+                    if (!(_i < currentStages_1.length)) return [3 /*break*/, 5];
+                    stage = currentStages_1[_i];
+                    return [5 /*yield**/, _loop_1(stage)];
+                case 3:
+                    _a.sent();
+                    _a.label = 4;
+                case 4:
+                    _i++;
+                    return [3 /*break*/, 2];
+                case 5: return [3 /*break*/, 7];
+                case 6:
+                    error_4 = _a.sent();
+                    console.error('Error loading saved emails:', error_4);
+                    return [3 /*break*/, 7];
+                case 7: return [2 /*return*/];
             }
         });
     });
