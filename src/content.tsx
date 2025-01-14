@@ -373,6 +373,15 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
     console.log('Adding email to stage:', stage.name, emailData);
 
     try{
+    // First check if this email already exists in storage
+    // const existingEmails = await StorageUtils.loadStageEmails(stage.id);
+    // const isDuplicate = existingEmails.some(email => email.id === emailData.id);
+    
+    // if (isDuplicate) {
+    //     console.log('Email already exists in this stage, skipping:', emailData.id);
+    //     return;
+    // }
+
     // Save to storage first
     const saved = await StorageUtils.saveEmailToStage(emailData, stage.id);
     if (!saved) {
@@ -389,9 +398,16 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
         return;
     }
 
+     // Check if this email is already displayed in UI
+     const existingEmailInUI = emailsContainer.querySelector(`[data-email-id="${emailData.id}"]`);
+     if (existingEmailInUI) {
+         console.log('Email already displayed in UI, skipping render');
+         return;
+     }
     // Create email element with your UI style
     const emailDiv = document.createElement('div');
     emailDiv.className = 'pipeline-email';
+    emailDiv.setAttribute('data-email-id', emailData.id);
     emailDiv.style.cssText = `
         background: white;
         border: 1px solid #e2e8f0;
@@ -430,7 +446,7 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
     // Add to container
     emailsContainer.appendChild(emailDiv);
 
-    // Update count
+    // Update count only if we actually added a new email
     const countElement = stageDiv.querySelector('.stage-count');
     if (countElement) {
         const currentCount = parseInt(countElement.textContent || '0');
@@ -573,12 +589,13 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
                 }
     
                 const emailData: EmailData = {
-                    id: Date.now().toString(),
+                    // Create a consistent ID by hashing the subject and sender
+                    id: `${subject}-${sender}`.replace(/[^a-zA-Z0-9]/g, ''),
                     subject: subject,
                     sender: sender,
                     timestamp: timestamp
                 };
-    
+            
                 console.log('Final processed email data:', emailData);
                 return emailData;
             };
@@ -649,11 +666,25 @@ async function loadSavedEmails() {
         const currentStages = stages.pipelineStages || defaultStages;
         
         for (const stage of currentStages) {
-            // Use StorageUtils to load emails for each stage
             const emails = await StorageUtils.loadStageEmails(stage.id);
             const stageElement = document.querySelector(`[data-stage-id="${stage.id}"]`);
             
             if (stageElement) {
+                // Clear existing count
+                const countElement = stageElement.querySelector('.stage-count');
+                if (countElement) {
+                    console.log("Count Element Cleared")
+                    countElement.textContent = '0';
+                }
+                
+                // Clear existing emails from UI
+                const emailsContainer = stageElement.querySelector('.stage-emails-container');
+                if (emailsContainer) {
+                    console.log("Email Container Cleared")
+                    emailsContainer.innerHTML = '';
+                }
+
+                // Now add the emails from storage
                 emails.forEach(email => {
                     addEmailToStage(email, stage, stageElement as HTMLElement);
                 });

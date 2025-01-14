@@ -279,7 +279,7 @@ function createSidebar() {
 // Update addEmailToStage function to match your UI
 function addEmailToStage(emailData, stage, stageDiv) {
     return __awaiter(this, void 0, void 0, function () {
-        var saved, emailsContainer, emailDiv_1, timestamp, formattedDate, countElement, currentCount, error_3;
+        var saved, emailsContainer, existingEmailInUI, emailDiv_1, timestamp, formattedDate, countElement, currentCount, error_3;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -302,8 +302,14 @@ function addEmailToStage(emailData, stage, stageDiv) {
                         console.error('Emails container not found');
                         return [2 /*return*/];
                     }
+                    existingEmailInUI = emailsContainer.querySelector("[data-email-id=\"".concat(emailData.id, "\"]"));
+                    if (existingEmailInUI) {
+                        console.log('Email already displayed in UI, skipping render');
+                        return [2 /*return*/];
+                    }
                     emailDiv_1 = document.createElement('div');
                     emailDiv_1.className = 'pipeline-email';
+                    emailDiv_1.setAttribute('data-email-id', emailData.id);
                     emailDiv_1.style.cssText = "\n        background: white;\n        border: 1px solid #e2e8f0;\n        border-radius: 4px;\n        padding: 8px;\n        margin-top: 4px;\n        cursor: pointer;\n        font-size: 13px;\n    ";
                     timestamp = new Date(emailData.timestamp);
                     formattedDate = timestamp.toLocaleString();
@@ -430,7 +436,8 @@ function makeEmailDraggable(emailRow) {
                 timestamp = now.toLocaleString();
             }
             var emailData = {
-                id: Date.now().toString(),
+                // Create a consistent ID by hashing the subject and sender
+                id: "".concat(subject, "-").concat(sender).replace(/[^a-zA-Z0-9]/g, ''),
                 subject: subject,
                 sender: sender,
                 timestamp: timestamp
@@ -501,7 +508,7 @@ function loadSavedEmails() {
                     stages = _a.sent();
                     currentStages = stages.pipelineStages || defaultStages;
                     _loop_1 = function (stage) {
-                        var emails, stageElement;
+                        var emails, stageElement, countElement, emailsContainer;
                         return __generator(this, function (_b) {
                             switch (_b.label) {
                                 case 0: return [4 /*yield*/, StorageUtils.loadStageEmails(stage.id)];
@@ -509,6 +516,17 @@ function loadSavedEmails() {
                                     emails = _b.sent();
                                     stageElement = document.querySelector("[data-stage-id=\"".concat(stage.id, "\"]"));
                                     if (stageElement) {
+                                        countElement = stageElement.querySelector('.stage-count');
+                                        if (countElement) {
+                                            console.log("Count Element Cleared");
+                                            countElement.textContent = '0';
+                                        }
+                                        emailsContainer = stageElement.querySelector('.stage-emails-container');
+                                        if (emailsContainer) {
+                                            console.log("Email Container Cleared");
+                                            emailsContainer.innerHTML = '';
+                                        }
+                                        // Now add the emails from storage
                                         emails.forEach(function (email) {
                                             addEmailToStage(email, stage, stageElement);
                                         });
