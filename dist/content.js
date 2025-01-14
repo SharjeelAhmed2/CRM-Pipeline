@@ -72,24 +72,6 @@ var observerState = {
 // Storage utility functions
 // Create the StorageUtils object with all storage-related functions
 var StorageUtils = {
-    // Helper function to compress email data
-    compressEmailData: function (email) {
-        return {
-            i: email.id,
-            s: email.subject.substring(0, 100),
-            f: email.sender.substring(0, 50),
-            t: email.timestamp
-        };
-    },
-    // Helper function to decompress email data
-    decompressEmailData: function (stored) {
-        return {
-            id: stored.i,
-            subject: stored.s,
-            sender: stored.f,
-            timestamp: stored.t
-        };
-    },
     // Save email to stage function
     saveEmailToStage: function (emailData, stageId) {
         return __awaiter(this, void 0, void 0, function () {
@@ -656,33 +638,51 @@ window.addEventListener('load', function () {
     //     setTimeout(observeGmailInbox, 1000);
     // });
     // Added periodic check to maintain buttons
-    var maintainButtons = function () {
-        var uninitializedRows = document.querySelectorAll('tr.zA:not([data-crm-initialized])');
-        if (uninitializedRows.length > 0) {
-            uninitializedRows.forEach(function (row) {
-                makeEmailDraggable(row);
-                row.setAttribute('data-crm-initialized', 'true');
-            });
-        }
-    };
+    // const maintainButtons = () => {
+    //     const uninitializedRows = document.querySelectorAll('tr.zA:not([data-crm-initialized])');
+    //     if (uninitializedRows.length > 0) {
+    //         uninitializedRows.forEach(row => {
+    //             makeEmailDraggable(row as HTMLElement);
+    //             row.setAttribute('data-crm-initialized', 'true');
+    //         });
+    //     }
+    // };
     // // Initial setup with delay
     // setTimeout(observeGmailInbox, 1000);
     // // Maintain buttons periodically
     // setInterval(maintainButtons, 2000);
-    setTimeout(function () {
-        observeGmailInbox();
-        // Backup check for lost buttons every 5 seconds
-        setInterval(function () {
-            if (!document.querySelector('.crm-move-button')) {
-                console.log('Buttons missing, reinitializing...');
-                var rows = document.querySelectorAll('tr.zA:not([data-crm-initialized])');
-                rows.forEach(function (row) {
-                    makeEmailDraggable(row);
-                    row.setAttribute('data-crm-initialized', 'true');
+    // Initial setup with multiple retry attempts for first load
+    var initialSetup = function () {
+        setTimeout(function () {
+            observeGmailInbox();
+            // Specific first-load check for the first 10 rows
+            var checkFirstRows = function () {
+                var firstRows = Array.from(document.querySelectorAll('tr.zA')).slice(0, 10);
+                firstRows.forEach(function (row) {
+                    if (!row.querySelector('.crm-move-button')) {
+                        makeEmailDraggable(row);
+                        row.setAttribute('data-crm-initialized', 'true');
+                    }
                 });
-            }
-        }, 5000);
-    }, 1000);
+            };
+            // Multiple checks for the first 10 rows during initial load
+            [100, 500, 1000, 2000].forEach(function (delay) {
+                setTimeout(checkFirstRows, delay);
+            });
+            // Regular backup check continues
+            setInterval(function () {
+                if (!document.querySelector('.crm-move-button')) {
+                    console.log('Buttons missing, reinitializing...');
+                    var rows = document.querySelectorAll('tr.zA:not([data-crm-initialized])');
+                    rows.forEach(function (row) {
+                        makeEmailDraggable(row);
+                        row.setAttribute('data-crm-initialized', 'true');
+                    });
+                }
+            }, 5000);
+        }, 1000);
+    };
+    initialSetup();
 });
 var init = function () {
     if (!window.location.origin.includes(GMAIL_URL_PATTERN)) {

@@ -52,25 +52,7 @@ const observerState: ObserverState = {
 // Storage utility functions
 // Create the StorageUtils object with all storage-related functions
 const StorageUtils = {
-    // Helper function to compress email data
-    compressEmailData(email: EmailData): StoredEmailData {
-        return {
-            i: email.id,
-            s: email.subject.substring(0, 100),
-            f: email.sender.substring(0, 50),
-            t: email.timestamp
-        };
-    },
-
-    // Helper function to decompress email data
-    decompressEmailData(stored: StoredEmailData): EmailData {
-        return {
-            id: stored.i,
-            subject: stored.s,
-            sender: stored.f,
-            timestamp: stored.t
-        };
-    },
+ 
 
     // Save email to stage function
     async saveEmailToStage(emailData: EmailData, stageId: string): Promise<boolean> {
@@ -775,36 +757,57 @@ window.addEventListener('load', () => {
         // });
 
     // Added periodic check to maintain buttons
-    const maintainButtons = () => {
-        const uninitializedRows = document.querySelectorAll('tr.zA:not([data-crm-initialized])');
-        if (uninitializedRows.length > 0) {
-            uninitializedRows.forEach(row => {
-                makeEmailDraggable(row as HTMLElement);
-                row.setAttribute('data-crm-initialized', 'true');
-            });
-        }
-    };
+    // const maintainButtons = () => {
+    //     const uninitializedRows = document.querySelectorAll('tr.zA:not([data-crm-initialized])');
+    //     if (uninitializedRows.length > 0) {
+    //         uninitializedRows.forEach(row => {
+    //             makeEmailDraggable(row as HTMLElement);
+    //             row.setAttribute('data-crm-initialized', 'true');
+    //         });
+    //     }
+    // };
 
     // // Initial setup with delay
     // setTimeout(observeGmailInbox, 1000);
     
     // // Maintain buttons periodically
     // setInterval(maintainButtons, 2000);
-    setTimeout(() => {
-        observeGmailInbox();
-        
-        // Backup check for lost buttons every 5 seconds
-        setInterval(() => {
-            if (!document.querySelector('.crm-move-button')) {
-                console.log('Buttons missing, reinitializing...');
-                const rows = document.querySelectorAll('tr.zA:not([data-crm-initialized])');
-                rows.forEach(row => {
-                    makeEmailDraggable(row as HTMLElement);
-                    row.setAttribute('data-crm-initialized', 'true');
+       // Initial setup with multiple retry attempts for first load
+       const initialSetup = () => {
+        setTimeout(() => {
+            observeGmailInbox();
+            
+            // Specific first-load check for the first 10 rows
+            const checkFirstRows = () => {
+                const firstRows = Array.from(document.querySelectorAll('tr.zA')).slice(0, 10);
+                firstRows.forEach(row => {
+                    if (!row.querySelector('.crm-move-button')) {
+                        makeEmailDraggable(row as HTMLElement);
+                        row.setAttribute('data-crm-initialized', 'true');
+                    }
                 });
-            }
-        }, 5000);
-    }, 1000);
+            };
+
+            // Multiple checks for the first 10 rows during initial load
+            [100, 500, 1000, 2000].forEach(delay => {
+                setTimeout(checkFirstRows, delay);
+            });
+            
+            // Regular backup check continues
+            setInterval(() => {
+                if (!document.querySelector('.crm-move-button')) {
+                    console.log('Buttons missing, reinitializing...');
+                    const rows = document.querySelectorAll('tr.zA:not([data-crm-initialized])');
+                    rows.forEach(row => {
+                        makeEmailDraggable(row as HTMLElement);
+                        row.setAttribute('data-crm-initialized', 'true');
+                    });
+                }
+            }, 5000);
+        }, 1000);
+    };
+
+    initialSetup();
 });
 const init = () => {
     if (!window.location.origin.includes(GMAIL_URL_PATTERN)) {
