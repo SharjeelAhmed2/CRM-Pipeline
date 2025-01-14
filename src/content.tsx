@@ -11,6 +11,12 @@ interface PipelineStage {
     color: string;
 }
 
+// To Avoid reloading of Sidebar 
+interface ObserverState {
+    isInitialized: boolean;
+    sidebarCreated: boolean;
+}
+
 // For Email Data 
 // Update the EmailData interface to match your extracted data structure
 // First define the interfaces
@@ -35,6 +41,13 @@ const defaultStages: PipelineStage[] = [
     { id: '3', name: 'Waiting', color: '#9F7AEA' },
     { id: '4', name: 'Closed', color: '#48BB78' }
 ];
+
+// To maintain multiple reloads 
+const observerState: ObserverState = {
+    isInitialized: false,
+    sidebarCreated: false
+};
+
 
 // Storage utility functions
 // Create the StorageUtils object with all storage-related functions
@@ -384,7 +397,9 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
         console.error('Failed to save email');
         return;
     }
-
+    else{
+    console.log("StorageUtils.saveEmailToStage Gets called")
+    }
     // Update UI only if save was successful
     const emailsContainer = stageDiv.querySelector('.stage-emails-container');
     if (!emailsContainer) {
@@ -666,42 +681,73 @@ async function loadSavedEmails() {
         console.error('Error loading saved emails:', error);
     }
 }
-
+async function cleanupStorage() {
+    try {
+        // Clear both sync and local storage
+        await chrome.storage.sync.clear();
+        await chrome.storage.local.clear();
+        console.log('Storage cleaned successfully');
+        
+        // Reset to default stages
+        await chrome.storage.sync.set({ pipelineStages: defaultStages });
+        console.log('Default stages restored');
+    } catch (error) {
+        console.error('Error cleaning storage:', error);
+    }
+}
 function observeGmailInbox() {
+    // Prevent multiple initialization
+    if (observerState.isInitialized) {
+        console.log('Observer already initialized, skipping...');
+        return;
+    }
+    
     console.log('Starting Gmail observer...');
     
     function initializeEmailRows() {
-        // Target only the table rows that contain actual emails
-        // Gmail uses 'zA' class for email rows
-        const emailRows = document.querySelectorAll('tr.zA');
-        console.log(`Found ${emailRows.length} email rows`);
-
-        emailRows.forEach(row => {
-            if (!row.hasAttribute('data-crm-initialized')) {
-                makeEmailDraggable(row as HTMLElement);
-                row.setAttribute('data-crm-initialized', 'true');
-                console.log('Initialized email row with classes:', row.className);
-            }
-        });
+        // Only initialize rows that don't have buttons
+        const emailRows = document.querySelectorAll('tr.zA:not([data-crm-initialized])');
+        
+        if (emailRows.length > 0) {
+            console.log(`Found ${emailRows.length} new email rows to initialize`);
+            emailRows.forEach(row => {
+                if (!row.querySelector('.crm-move-button')) {
+                    makeEmailDraggable(row as HTMLElement);
+                    row.setAttribute('data-crm-initialized', 'true');
+                }
+            });
+        }
     }
 
-    // Update the target node to specifically watch the email list
     const findEmailContainer = () => {
-        // Gmail's main content area where emails are listed
-        const targetNode = document.querySelector('.AO');
+        const targetNode = document.querySelector('.AO, .ain');
         if (!targetNode) {
-            console.log('Gmail email container not found, retrying...');
+            console.log('Gmail container not found, retrying...');
             setTimeout(findEmailContainer, 1000);
             return;
         }
 
-        console.log('Found Gmail email container');
-        createSidebar();
+        // Only create sidebar once
+        if (!observerState.sidebarCreated) {
+            console.log('Found Gmail container, creating sidebar and observer');
+            createSidebar();
+            observerState.sidebarCreated = true;
+        }
 
         const observer = new MutationObserver((mutations) => {
-            mutations.forEach(() => {
-                initializeEmailRows();
+            let shouldInitialize = false;
+            mutations.forEach(mutation => {
+                if (mutation.addedNodes.length > 0 || 
+                    mutation.type === 'childList') {
+                    shouldInitialize = true;
+                }
             });
+            
+            if (shouldInitialize) {
+                requestAnimationFrame(() => {
+                    initializeEmailRows();
+                });
+            }
         });
 
         observer.observe(targetNode, {
@@ -709,18 +755,56 @@ function observeGmailInbox() {
             subtree: true
         });
 
-        // Initial call
-        initializeEmailRows();
+        // Initial setup
+        requestAnimationFrame(() => {
+            initializeEmailRows();
+        });
+        
+        observerState.isInitialized = true;
     };
 
-    // Start looking for the email container
     findEmailContainer();
 }
-
 // Add this to your initialization
 window.addEventListener('load', () => {
     console.log('Page loaded, initializing CRM...');
-    setTimeout(observeGmailInbox, 1000); // Give Gmail a moment to set up
+    
+        // Clean storage before initialization
+        // cleanupStorage().then(() => {
+        //     setTimeout(observeGmailInbox, 1000);
+        // });
+
+    // Added periodic check to maintain buttons
+    const maintainButtons = () => {
+        const uninitializedRows = document.querySelectorAll('tr.zA:not([data-crm-initialized])');
+        if (uninitializedRows.length > 0) {
+            uninitializedRows.forEach(row => {
+                makeEmailDraggable(row as HTMLElement);
+                row.setAttribute('data-crm-initialized', 'true');
+            });
+        }
+    };
+
+    // // Initial setup with delay
+    // setTimeout(observeGmailInbox, 1000);
+    
+    // // Maintain buttons periodically
+    // setInterval(maintainButtons, 2000);
+    setTimeout(() => {
+        observeGmailInbox();
+        
+        // Backup check for lost buttons every 5 seconds
+        setInterval(() => {
+            if (!document.querySelector('.crm-move-button')) {
+                console.log('Buttons missing, reinitializing...');
+                const rows = document.querySelectorAll('tr.zA:not([data-crm-initialized])');
+                rows.forEach(row => {
+                    makeEmailDraggable(row as HTMLElement);
+                    row.setAttribute('data-crm-initialized', 'true');
+                });
+            }
+        }, 5000);
+    }, 1000);
 });
 const init = () => {
     if (!window.location.origin.includes(GMAIL_URL_PATTERN)) {
