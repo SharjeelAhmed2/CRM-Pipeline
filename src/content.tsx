@@ -302,17 +302,17 @@ async function createSidebar() {
     const sidebar = document.createElement('div');
     sidebar.id = 'gmail-crm-sidebar';
     sidebar.style.cssText = `
-    position: fixed;
-    right: 0;
-    top: 0;
-    width: 250px;
-    height: 100vh;
-    background: #f8fafc;
-    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-    z-index: 1000;
-    padding: 20px;
-    overflow-y: auto;
-`;
+        position: fixed;
+        right: 0;
+        top: 0;
+        width: 350px;  // Increased from 250px to 350px
+        height: 100vh;
+        background: #f8fafc;
+        box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+        z-index: 1000;
+        padding: 20px;
+        overflow-y: auto;
+    `;
     // Add title
     const title = document.createElement('h2');
     title.textContent = 'CRM Pipeline';
@@ -362,7 +362,7 @@ async function createSidebar() {
     const gmailContent =  document.querySelector<HTMLElement>('.bkK');
     if (gmailContent) {
 
-        gmailContent.style.marginRight = '250px' ;
+        gmailContent.style.marginRight = '350px' ;
     }
    await loadSavedEmails();
 }
@@ -423,16 +423,32 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
     const formattedDate = timestamp.toLocaleString();
 
     // Set email content
-    emailDiv.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: start;">
-            <div style="flex-grow: 1;">
-                <div style="font-weight: 500; margin-bottom: 4px; color: #2d3748;">${emailData.subject}</div>
-                <div style="color: #718096; font-size: 12px;">${emailData.sender}</div>
-            </div>
-            <div style="color: #a0aec0; font-size: 11px; white-space: nowrap;">
-                ${formattedDate}
-            </div>
-        </div>
+    // emailDiv.innerHTML = `
+    //     <div style="display: flex; justify-content: space-between; align-items: start;">
+    //         <div style="flex-grow: 1;">
+    //             <div style="font-weight: 500; margin-bottom: 4px; color: #2d3748;">${emailData.subject}</div>
+    //             <div style="color: #718096; font-size: 12px;">${emailData.sender}</div>
+    //         </div>
+    //         <div style="color: #a0aec0; font-size: 11px; white-space: nowrap;">
+    //             ${formattedDate}
+    //         </div>
+    //     </div>
+    // `;
+        // Create table layout
+        emailDiv.innerHTML = `
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="width: 30%; padding: 4px; border-bottom: 1px solid #e2e8f0; color: #4a5568; font-size: 12px;">
+                    ${emailData.sender.split('@')[0]}
+                </td>
+                <td style="width: 45%; padding: 4px; border-bottom: 1px solid #e2e8f0; color: #2d3748; font-weight: 500;">
+                    ${emailData.subject.length > 40 ? emailData.subject.substring(0, 40) + '...' : emailData.subject}
+                </td>
+                <td style="width: 25%; padding: 4px; border-bottom: 1px solid #e2e8f0; color: #718096; font-size: 11px; text-align: right;">
+                    ${new Date(emailData.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </td>
+            </tr>
+        </table>
     `;
 
     // Add hover effect

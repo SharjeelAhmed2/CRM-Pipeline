@@ -232,7 +232,7 @@ function createSidebar() {
                     console.log('Creating sidebarfff');
                     sidebar = document.createElement('div');
                     sidebar.id = 'gmail-crm-sidebar';
-                    sidebar.style.cssText = "\n    position: fixed;\n    right: 0;\n    top: 0;\n    width: 250px;\n    height: 100vh;\n    background: #f8fafc;\n    box-shadow: -2px 0 5px rgba(0,0,0,0.1);\n    z-index: 1000;\n    padding: 20px;\n    overflow-y: auto;\n";
+                    sidebar.style.cssText = "\n        position: fixed;\n        right: 0;\n        top: 0;\n        width: 350px;  // Increased from 250px to 350px\n        height: 100vh;\n        background: #f8fafc;\n        box-shadow: -2px 0 5px rgba(0,0,0,0.1);\n        z-index: 1000;\n        padding: 20px;\n        overflow-y: auto;\n    ";
                     title = document.createElement('h2');
                     title.textContent = 'CRM Pipeline';
                     title.style.cssText = 'margin-bottom: 15px; font-weight: bold; color: #2d3748;';
@@ -265,7 +265,7 @@ function createSidebar() {
                     document.body.appendChild(sidebar);
                     gmailContent = document.querySelector('.bkK');
                     if (gmailContent) {
-                        gmailContent.style.marginRight = '250px';
+                        gmailContent.style.marginRight = '350px';
                     }
                     return [4 /*yield*/, loadSavedEmails()];
                 case 1:
@@ -314,7 +314,19 @@ function addEmailToStage(emailData, stage, stageDiv) {
                     timestamp = new Date(emailData.timestamp);
                     formattedDate = timestamp.toLocaleString();
                     // Set email content
-                    emailDiv_1.innerHTML = "\n        <div style=\"display: flex; justify-content: space-between; align-items: start;\">\n            <div style=\"flex-grow: 1;\">\n                <div style=\"font-weight: 500; margin-bottom: 4px; color: #2d3748;\">".concat(emailData.subject, "</div>\n                <div style=\"color: #718096; font-size: 12px;\">").concat(emailData.sender, "</div>\n            </div>\n            <div style=\"color: #a0aec0; font-size: 11px; white-space: nowrap;\">\n                ").concat(formattedDate, "\n            </div>\n        </div>\n    ");
+                    // emailDiv.innerHTML = `
+                    //     <div style="display: flex; justify-content: space-between; align-items: start;">
+                    //         <div style="flex-grow: 1;">
+                    //             <div style="font-weight: 500; margin-bottom: 4px; color: #2d3748;">${emailData.subject}</div>
+                    //             <div style="color: #718096; font-size: 12px;">${emailData.sender}</div>
+                    //         </div>
+                    //         <div style="color: #a0aec0; font-size: 11px; white-space: nowrap;">
+                    //             ${formattedDate}
+                    //         </div>
+                    //     </div>
+                    // `;
+                    // Create table layout
+                    emailDiv_1.innerHTML = "\n        <table style=\"width: 100%; border-collapse: collapse;\">\n            <tr>\n                <td style=\"width: 30%; padding: 4px; border-bottom: 1px solid #e2e8f0; color: #4a5568; font-size: 12px;\">\n                    ".concat(emailData.sender.split('@')[0], "\n                </td>\n                <td style=\"width: 45%; padding: 4px; border-bottom: 1px solid #e2e8f0; color: #2d3748; font-weight: 500;\">\n                    ").concat(emailData.subject.length > 40 ? emailData.subject.substring(0, 40) + '...' : emailData.subject, "\n                </td>\n                <td style=\"width: 25%; padding: 4px; border-bottom: 1px solid #e2e8f0; color: #718096; font-size: 11px; text-align: right;\">\n                    ").concat(new Date(emailData.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), "\n                </td>\n            </tr>\n        </table>\n    ");
                     // Add hover effect
                     emailDiv_1.addEventListener('mouseenter', function () {
                         emailDiv_1.style.backgroundColor = '#f7fafc';
