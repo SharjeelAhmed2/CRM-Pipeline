@@ -225,48 +225,49 @@ function createAddStageForm() {
 // For Sidebar
 function createSidebar() {
     return __awaiter(this, void 0, void 0, function () {
-        var sidebar, title, gmailContent;
+        var sidebar, headerSection, title, contentSection, stagesContainer, footerSection, addButton, gmailContent;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    console.log('Creating sidebarfff');
+                    console.log('Creating sidebar');
                     sidebar = document.createElement('div');
                     sidebar.id = 'gmail-crm-sidebar';
-                    sidebar.style.cssText = "\n        position: fixed;\n        right: 0;\n        top: 0;\n        width: 350px;  // Increased from 250px to 350px\n        height: 100vh;\n        background: #f8fafc;\n        box-shadow: -2px 0 5px rgba(0,0,0,0.1);\n        z-index: 1000;\n        padding: 20px;\n        overflow-y: auto;\n    ";
+                    sidebar.style.cssText = "\n        position: fixed;\n        right: 0;\n        top: 0;\n        width: 450px;\n        height: 100%;\n        background: #f8fafc;\n        box-shadow: -2px 0 5px rgba(0,0,0,0.1);\n        z-index: 1000;\n        display: flex;\n        flex-direction: column;\n        overflow: hidden; /* Important: prevent double scrollbars */\n    ";
+                    headerSection = document.createElement('div');
+                    headerSection.style.cssText = "\n        padding: 16px 20px;\n        border-bottom: 1px solid #e5e7eb;\n        background: white;\n        flex-shrink: 0;\n    ";
                     title = document.createElement('h2');
                     title.textContent = 'CRM Pipeline';
-                    title.style.cssText = 'margin-bottom: 15px; font-weight: bold; color: #2d3748;';
-                    sidebar.appendChild(title);
-                    //Stages Work
-                    // Get stages from storage or use defaults
-                    //This is Chrome's storage API that syncs data across user's browsers
-                    chrome.storage.sync.get(['pipelineStages'], function (result) {
-                        var stages = result.pipelineStages || defaultStages;
-                        // Create stages container
-                        var stagesContainer = document.createElement('div');
-                        stagesContainer.id = 'pipeline-stages';
-                        console.log('Created pipeline-stages container');
-                        // stages.forEach(stage => {
-                        //     stagesContainer.appendChild(createStageElement(stage));
-                        // });
-                        // Explicitly type the stage parameter
-                        stages.forEach(function (stage) {
-                            stagesContainer.appendChild(createStageElement(stage));
-                        });
-                        sidebar.appendChild(stagesContainer);
-                        // Add "Add Stage" button
-                        var addButton = document.createElement('button');
-                        addButton.textContent = '+ Add Stage';
-                        addButton.style.cssText = "\n            width: 100%;\n            padding: 8px;\n            background: #4299E1;\n            color: white;\n            border: none;\n            border-radius: 4px;\n            cursor: pointer;\n            margin-top: 10px;\n        ";
-                        addButton.addEventListener('click', createAddStageForm);
-                        sidebar.appendChild(addButton);
-                    });
+                    title.style.cssText = 'margin: 0; font-weight: bold; color: #2d3748; font-size: 16px;';
+                    headerSection.appendChild(title);
+                    sidebar.appendChild(headerSection);
+                    contentSection = document.createElement('div');
+                    contentSection.style.cssText = "\n        flex: 1;\n        overflow-y: auto;\n        padding: 16px;\n        height: calc(100vh - 120px); /* Account for header and footer */\n    ";
+                    stagesContainer = document.createElement('div');
+                    stagesContainer.id = 'pipeline-stages';
+                    stagesContainer.style.cssText = "\n        display: flex;\n        flex-direction: column;\n        gap: 16px;\n    ";
+                    contentSection.appendChild(stagesContainer);
+                    sidebar.appendChild(contentSection);
+                    footerSection = document.createElement('div');
+                    footerSection.style.cssText = "\n        padding: 16px 20px;\n        border-top: 1px solid #e5e7eb;\n        background: white;\n        flex-shrink: 0;\n    ";
+                    addButton = document.createElement('button');
+                    addButton.textContent = '+ Add Stage';
+                    addButton.style.cssText = "\n        width: 100%;\n        padding: 8px;\n        background: #4299E1;\n        color: white;\n        border: none;\n        border-radius: 4px;\n        cursor: pointer;\n        font-size: 14px;\n        font-weight: 500;\n        transition: background-color 0.2s;\n        &:hover {\n            background: #3182ce;\n        }\n    ";
+                    addButton.addEventListener('click', createAddStageForm);
+                    footerSection.appendChild(addButton);
+                    sidebar.appendChild(footerSection);
                     // Add to page
                     document.body.appendChild(sidebar);
                     gmailContent = document.querySelector('.bkK');
                     if (gmailContent) {
-                        gmailContent.style.marginRight = '350px';
+                        gmailContent.style.marginRight = '450px';
                     }
+                    // Load stages from storage
+                    chrome.storage.sync.get(['pipelineStages'], function (result) {
+                        var stages = result.pipelineStages || defaultStages;
+                        stages.forEach(function (stage) {
+                            stagesContainer.appendChild(createStageElement(stage));
+                        });
+                    });
                     return [4 /*yield*/, loadSavedEmails()];
                 case 1:
                     _a.sent();
@@ -279,23 +280,17 @@ function createSidebar() {
 // Update addEmailToStage function to match your UI
 function addEmailToStage(emailData, stage, stageDiv) {
     return __awaiter(this, void 0, void 0, function () {
-        var saved, emailsContainer, existingEmailInUI, emailDiv_1, timestamp, formattedDate, countElement, currentCount, error_3;
+        var saved, emailsContainer, existingEmailInUI, truncateText, emailDiv_1, sender_1, subjectText_1, timestamp, countElement, currentCount, error_3;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    console.log('Adding email to stage:', stage.name, emailData);
-                    _a.label = 1;
-                case 1:
-                    _a.trys.push([1, 3, , 4]);
+                    _a.trys.push([0, 2, , 3]);
                     return [4 /*yield*/, StorageUtils.saveEmailToStage(emailData, stage.id)];
-                case 2:
+                case 1:
                     saved = _a.sent();
                     if (!saved) {
                         console.error('Failed to save email');
                         return [2 /*return*/];
-                    }
-                    else {
-                        console.log("StorageUtils.saveEmailToStage Gets called");
                     }
                     emailsContainer = stageDiv.querySelector('.stage-emails-container');
                     if (!emailsContainer) {
@@ -307,32 +302,48 @@ function addEmailToStage(emailData, stage, stageDiv) {
                         console.log('Email already displayed in UI, skipping render');
                         return [2 /*return*/];
                     }
+                    truncateText = function (text, limit) {
+                        if (text.length <= limit)
+                            return text;
+                        return {
+                            short: text.substring(0, limit) + '...',
+                            full: text
+                        };
+                    };
                     emailDiv_1 = document.createElement('div');
                     emailDiv_1.className = 'pipeline-email';
                     emailDiv_1.setAttribute('data-email-id', emailData.id);
-                    emailDiv_1.style.cssText = "\n        background: white;\n        border: 1px solid #e2e8f0;\n        border-radius: 4px;\n        padding: 8px;\n        margin-top: 4px;\n        cursor: pointer;\n        font-size: 13px;\n    ";
-                    timestamp = new Date(emailData.timestamp);
-                    formattedDate = timestamp.toLocaleString();
-                    // Set email content
-                    // emailDiv.innerHTML = `
-                    //     <div style="display: flex; justify-content: space-between; align-items: start;">
-                    //         <div style="flex-grow: 1;">
-                    //             <div style="font-weight: 500; margin-bottom: 4px; color: #2d3748;">${emailData.subject}</div>
-                    //             <div style="color: #718096; font-size: 12px;">${emailData.sender}</div>
-                    //         </div>
-                    //         <div style="color: #a0aec0; font-size: 11px; white-space: nowrap;">
-                    //             ${formattedDate}
-                    //         </div>
-                    //     </div>
-                    // `;
-                    // Create table layout
-                    emailDiv_1.innerHTML = "\n        <table style=\"width: 100%; border-collapse: collapse;\">\n            <tr>\n                <td style=\"width: 30%; padding: 4px; border-bottom: 1px solid #e2e8f0; color: #4a5568; font-size: 12px;\">\n                    ".concat(emailData.sender.split('@')[0], "\n                </td>\n                <td style=\"width: 45%; padding: 4px; border-bottom: 1px solid #e2e8f0; color: #2d3748; font-weight: 500;\">\n                    ").concat(emailData.subject.length > 40 ? emailData.subject.substring(0, 40) + '...' : emailData.subject, "\n                </td>\n                <td style=\"width: 25%; padding: 4px; border-bottom: 1px solid #e2e8f0; color: #718096; font-size: 11px; text-align: right;\">\n                    ").concat(new Date(emailData.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), "\n                </td>\n            </tr>\n        </table>\n    ");
+                    emailDiv_1.style.cssText = "\n            padding: 8px 16px;\n            cursor: pointer;\n            font-size: 13px;\n            display: flex;\n            align-items: center;\n            border-bottom: 1px solid #E5E7EB;\n            min-height: 40px;\n        ";
+                    sender_1 = truncateText(emailData.sender.split('@')[0], 15);
+                    subjectText_1 = truncateText(emailData.subject, 30);
+                    timestamp = new Date(emailData.timestamp).toLocaleDateString();
+                    // Create the row content
+                    emailDiv_1.innerHTML = "\n            <div style=\"flex: 0 0 30px;\">\n                <input type=\"checkbox\" style=\"margin: 0;\">\n            </div>\n            <div style=\"flex: 0 0 150px; overflow: hidden;\" class=\"sender-cell\">\n                ".concat(typeof sender_1 === 'string' ? sender_1 : sender_1.short, "\n                ").concat(typeof sender_1 === 'object' ?
+                        "<button class=\"see-more-btn\" style=\"color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;\">...</button>"
+                        : '', "\n            </div>\n            <div style=\"flex: 1; overflow: hidden;\" class=\"subject-cell\">\n                ").concat(typeof subjectText_1 === 'string' ? subjectText_1 : subjectText_1.short, "\n                ").concat(typeof subjectText_1 === 'object' ?
+                        "<button class=\"see-more-btn\" style=\"color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;\">...</button>"
+                        : '', "\n            </div>\n            <div style=\"flex: 0 0 100px; text-align: right; color: #6B7280;\">\n                ").concat(timestamp, "\n            </div>\n        ");
+                    // Add "See More" functionality
+                    emailDiv_1.querySelectorAll('.see-more-btn').forEach(function (btn) {
+                        btn.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            var cell = btn.parentElement;
+                            if (cell) {
+                                if (cell.classList.contains('sender-cell')) {
+                                    cell.textContent = typeof sender_1 === 'object' ? sender_1.full : sender_1;
+                                }
+                                else if (cell.classList.contains('subject-cell')) {
+                                    cell.textContent = typeof subjectText_1 === 'object' ? subjectText_1.full : subjectText_1;
+                                }
+                            }
+                        });
+                    });
                     // Add hover effect
                     emailDiv_1.addEventListener('mouseenter', function () {
-                        emailDiv_1.style.backgroundColor = '#f7fafc';
+                        emailDiv_1.style.backgroundColor = '#F3F4F6';
                     });
                     emailDiv_1.addEventListener('mouseleave', function () {
-                        emailDiv_1.style.backgroundColor = 'white';
+                        emailDiv_1.style.backgroundColor = 'transparent';
                     });
                     // Add to container
                     emailsContainer.appendChild(emailDiv_1);
@@ -341,12 +352,12 @@ function addEmailToStage(emailData, stage, stageDiv) {
                         currentCount = parseInt(countElement.textContent || '0');
                         countElement.textContent = (currentCount + 1).toString();
                     }
-                    return [3 /*break*/, 4];
-                case 3:
+                    return [3 /*break*/, 3];
+                case 2:
                     error_3 = _a.sent();
                     console.error('Error in addEmailToStage:', error_3);
-                    return [3 /*break*/, 4];
-                case 4: return [2 /*return*/];
+                    return [3 /*break*/, 3];
+                case 3: return [2 /*return*/];
             }
         });
     });

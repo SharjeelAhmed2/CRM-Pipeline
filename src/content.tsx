@@ -298,184 +298,222 @@ function createStageElement(stage: PipelineStage) {
 
 // For Sidebar
 async function createSidebar() {
-    console.log('Creating sidebarfff');
+    console.log('Creating sidebar');
     const sidebar = document.createElement('div');
     sidebar.id = 'gmail-crm-sidebar';
     sidebar.style.cssText = `
         position: fixed;
         right: 0;
         top: 0;
-        width: 350px;  // Increased from 250px to 350px
-        height: 100vh;
+        width: 450px;
+        height: 100%;
         background: #f8fafc;
         box-shadow: -2px 0 5px rgba(0,0,0,0.1);
         z-index: 1000;
-        padding: 20px;
-        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden; /* Important: prevent double scrollbars */
     `;
-    // Add title
+
+    // Header section
+    const headerSection = document.createElement('div');
+    headerSection.style.cssText = `
+        padding: 16px 20px;
+        border-bottom: 1px solid #e5e7eb;
+        background: white;
+        flex-shrink: 0;
+    `;
+    
     const title = document.createElement('h2');
     title.textContent = 'CRM Pipeline';
-    title.style.cssText = 'margin-bottom: 15px; font-weight: bold; color: #2d3748;';
-    sidebar.appendChild(title);
- 
-    //Stages Work
-        // Get stages from storage or use defaults
-        //This is Chrome's storage API that syncs data across user's browsers
-        chrome.storage.sync.get(['pipelineStages'], (result) => {
-            const stages = result.pipelineStages || defaultStages;
-            
-            // Create stages container
-            const stagesContainer = document.createElement('div');
-            stagesContainer.id = 'pipeline-stages';
-            console.log('Created pipeline-stages container');
-            // stages.forEach(stage => {
-            //     stagesContainer.appendChild(createStageElement(stage));
-            // });
-            // Explicitly type the stage parameter
-            stages.forEach((stage: PipelineStage) => {
-                stagesContainer.appendChild(createStageElement(stage));
-            });
-            sidebar.appendChild(stagesContainer);
-            // Add "Add Stage" button
+    title.style.cssText = 'margin: 0; font-weight: bold; color: #2d3748; font-size: 16px;';
+    headerSection.appendChild(title);
+    sidebar.appendChild(headerSection);
 
-        const addButton = document.createElement('button');
-        addButton.textContent = '+ Add Stage';
-        addButton.style.cssText = `
-            width: 100%;
-            padding: 8px;
-            background: #4299E1;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-        `;
-        addButton.addEventListener('click', createAddStageForm);
-        sidebar.appendChild(addButton);
-        });
+    // Scrollable content section
+    const contentSection = document.createElement('div');
+    contentSection.style.cssText = `
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+        height: calc(100vh - 120px); /* Account for header and footer */
+    `;
+
+    // Stages container
+    const stagesContainer = document.createElement('div');
+    stagesContainer.id = 'pipeline-stages';
+    stagesContainer.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    `;
+    contentSection.appendChild(stagesContainer);
+    sidebar.appendChild(contentSection);
+
+    // Footer section with Add Stage button
+    const footerSection = document.createElement('div');
+    footerSection.style.cssText = `
+        padding: 16px 20px;
+        border-top: 1px solid #e5e7eb;
+        background: white;
+        flex-shrink: 0;
+    `;
+
+    const addButton = document.createElement('button');
+    addButton.textContent = '+ Add Stage';
+    addButton.style.cssText = `
+        width: 100%;
+        padding: 8px;
+        background: #4299E1;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background-color 0.2s;
+        &:hover {
+            background: #3182ce;
+        }
+    `;
+    addButton.addEventListener('click', createAddStageForm);
+    footerSection.appendChild(addButton);
+    sidebar.appendChild(footerSection);
 
     // Add to page
     document.body.appendChild(sidebar);
     
     // Adjust Gmail's main content
-    const gmailContent =  document.querySelector<HTMLElement>('.bkK');
+    const gmailContent = document.querySelector<HTMLElement>('.bkK');
     if (gmailContent) {
-
-        gmailContent.style.marginRight = '350px' ;
+        gmailContent.style.marginRight = '450px';
     }
-   await loadSavedEmails();
+
+    // Load stages from storage
+    chrome.storage.sync.get(['pipelineStages'], (result) => {
+        const stages = result.pipelineStages || defaultStages;
+        stages.forEach((stage: PipelineStage) => {
+            stagesContainer.appendChild(createStageElement(stage));
+        });
+    });
+
+    await loadSavedEmails();
 }
 
 // Add this new function to handle adding emails to stages
 // Update addEmailToStage function to match your UI
 async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stageDiv: HTMLElement) {
-    console.log('Adding email to stage:', stage.name, emailData);
+    try {
+        // Save to storage first
+        const saved = await StorageUtils.saveEmailToStage(emailData, stage.id);
+        if (!saved) {
+            console.error('Failed to save email');
+            return;
+        }
 
-    try{
-    // First check if this email already exists in storage
-    // const existingEmails = await StorageUtils.loadStageEmails(stage.id);
-    // const isDuplicate = existingEmails.some(email => email.id === emailData.id);
-    
-    // if (isDuplicate) {
-    //     console.log('Email already exists in this stage, skipping:', emailData.id);
-    //     return;
-    // }
+        const emailsContainer = stageDiv.querySelector('.stage-emails-container');
+        if (!emailsContainer) {
+            console.error('Emails container not found');
+            return;
+        }
 
-    // Save to storage first
-    const saved = await StorageUtils.saveEmailToStage(emailData, stage.id);
-    if (!saved) {
-        console.error('Failed to save email');
-        return;
-    }
-    else{
-    console.log("StorageUtils.saveEmailToStage Gets called")
-    }
-    // Update UI only if save was successful
-    const emailsContainer = stageDiv.querySelector('.stage-emails-container');
-    if (!emailsContainer) {
-        console.error('Emails container not found');
-        return;
-    }
+        // Check for existing email
+        const existingEmailInUI = emailsContainer.querySelector(`[data-email-id="${emailData.id}"]`);
+        if (existingEmailInUI) {
+            console.log('Email already displayed in UI, skipping render');
+            return;
+        }
 
-     // Check if this email is already displayed in UI
-     const existingEmailInUI = emailsContainer.querySelector(`[data-email-id="${emailData.id}"]`);
-     if (existingEmailInUI) {
-         console.log('Email already displayed in UI, skipping render');
-         return;
-     }
-    // Create email element with your UI style
-    const emailDiv = document.createElement('div');
-    emailDiv.className = 'pipeline-email';
-    emailDiv.setAttribute('data-email-id', emailData.id);
-    emailDiv.style.cssText = `
-        background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 4px;
-        padding: 8px;
-        margin-top: 4px;
-        cursor: pointer;
-        font-size: 13px;
-    `;
+        interface TruncatedText {
+            short: string;
+            full: string;
+        }
 
-    // Format the timestamp
-    const timestamp = new Date(emailData.timestamp);
-    const formattedDate = timestamp.toLocaleString();
+        // Truncate text function
+        const truncateText = (text: string, limit: number): string | TruncatedText => {
+            if (text.length <= limit) return text;
+            return {
+                short: text.substring(0, limit) + '...',
+                full: text
+            };
+        };
 
-    // Set email content
-    // emailDiv.innerHTML = `
-    //     <div style="display: flex; justify-content: space-between; align-items: start;">
-    //         <div style="flex-grow: 1;">
-    //             <div style="font-weight: 500; margin-bottom: 4px; color: #2d3748;">${emailData.subject}</div>
-    //             <div style="color: #718096; font-size: 12px;">${emailData.sender}</div>
-    //         </div>
-    //         <div style="color: #a0aec0; font-size: 11px; white-space: nowrap;">
-    //             ${formattedDate}
-    //         </div>
-    //     </div>
-    // `;
-        // Create table layout
+        // Create email element with table-like layout
+        const emailDiv = document.createElement('div');
+        emailDiv.className = 'pipeline-email';
+        emailDiv.setAttribute('data-email-id', emailData.id);
+        emailDiv.style.cssText = `
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #E5E7EB;
+            min-height: 40px;
+        `;
+
+        // Format sender, subject and timestamp
+        const sender = truncateText(emailData.sender.split('@')[0], 15);
+        const subjectText = truncateText(emailData.subject, 30);
+        const timestamp = new Date(emailData.timestamp).toLocaleDateString();
+
+        // Create the row content
         emailDiv.innerHTML = `
-        <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-                <td style="width: 30%; padding: 4px; border-bottom: 1px solid #e2e8f0; color: #4a5568; font-size: 12px;">
-                    ${emailData.sender.split('@')[0]}
-                </td>
-                <td style="width: 45%; padding: 4px; border-bottom: 1px solid #e2e8f0; color: #2d3748; font-weight: 500;">
-                    ${emailData.subject.length > 40 ? emailData.subject.substring(0, 40) + '...' : emailData.subject}
-                </td>
-                <td style="width: 25%; padding: 4px; border-bottom: 1px solid #e2e8f0; color: #718096; font-size: 11px; text-align: right;">
-                    ${new Date(emailData.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </td>
-            </tr>
-        </table>
-    `;
+            <div style="flex: 0 0 30px;">
+                <input type="checkbox" style="margin: 0;">
+            </div>
+            <div style="flex: 0 0 150px; overflow: hidden;" class="sender-cell">
+                ${typeof sender === 'string' ? sender : sender.short}
+                ${typeof sender === 'object' ? 
+                    `<button class="see-more-btn" style="color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;">...</button>` 
+                    : ''}
+            </div>
+            <div style="flex: 1; overflow: hidden;" class="subject-cell">
+                ${typeof subjectText === 'string' ? subjectText : subjectText.short}
+                ${typeof subjectText === 'object' ? 
+                    `<button class="see-more-btn" style="color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;">...</button>` 
+                    : ''}
+            </div>
+            <div style="flex: 0 0 100px; text-align: right; color: #6B7280;">
+                ${timestamp}
+            </div>
+        `;
 
-    // Add hover effect
-    emailDiv.addEventListener('mouseenter', () => {
-        emailDiv.style.backgroundColor = '#f7fafc';
-    });
-    emailDiv.addEventListener('mouseleave', () => {
-        emailDiv.style.backgroundColor = 'white';
-    });
+        // Add "See More" functionality
+        emailDiv.querySelectorAll('.see-more-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const cell = (btn as HTMLElement).parentElement;
+                if (cell) {
+                    if (cell.classList.contains('sender-cell')) {
+                        cell.textContent = typeof sender === 'object' ? sender.full : sender;
+                    } else if (cell.classList.contains('subject-cell')) {
+                        cell.textContent = typeof subjectText === 'object' ? subjectText.full : subjectText;
+                    }
+                }
+            });
+        });
 
-    // Add to container
-    emailsContainer.appendChild(emailDiv);
+        // Add hover effect
+        emailDiv.addEventListener('mouseenter', () => {
+            emailDiv.style.backgroundColor = '#F3F4F6';
+        });
+        emailDiv.addEventListener('mouseleave', () => {
+            emailDiv.style.backgroundColor = 'transparent';
+        });
 
-    // Update count only if we actually added a new email
-    const countElement = stageDiv.querySelector('.stage-count');
-    if (countElement) {
-        const currentCount = parseInt(countElement.textContent || '0');
-        countElement.textContent = (currentCount + 1).toString();
+        // Add to container
+        emailsContainer.appendChild(emailDiv);
+
+        // Update count
+        const countElement = stageDiv.querySelector('.stage-count');
+        if (countElement) {
+            const currentCount = parseInt(countElement.textContent || '0');
+            countElement.textContent = (currentCount + 1).toString();
+        }
+    } catch(error) {
+        console.error('Error in addEmailToStage:', error);
     }
-        }
-        catch(error)
-        {
-            console.error('Error in addEmailToStage:', error);
-        }
-
-    // Save to storage
-   // saveEmailToStage(emailData, stage.id);
 }
 
 
