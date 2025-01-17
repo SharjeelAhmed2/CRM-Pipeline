@@ -206,117 +206,6 @@ function createStageElement(stage: PipelineStage) {
 
  /// For Add Stage Button Functionality 
 
- function createAddStageForm() {
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        z-index: 10001;
-        width: 300px;
-    `;
-
-    const overlay = document.createElement('div');
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0,0,0,0.5);
-        z-index: 10000;
-    `;
-
-    const form = document.createElement('form');
-    form.innerHTML = `
-        <h3 style="margin-bottom: 15px; font-weight: bold;">Add New Stage</h3>
-        <div style="margin-bottom: 15px;">
-            <input type="text" id="stageName" placeholder="Stage Name" style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid #e2e8f0;
-                border-radius: 4px;
-                margin-bottom: 10px;
-            ">
-            <input type="color" id="stageColor" value="#718096" style="
-                width: 100%;
-                height: 40px;
-                border: 1px solid #e2e8f0;
-                border-radius: 4px;
-            ">
-        </div>
-        <div style="display: flex; gap: 10px;">
-            <button type="submit" style="
-                flex: 1;
-                padding: 8px;
-                background: #4299E1;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-            ">Add</button>
-            <button type="button" id="cancelBtn" style="
-                flex: 1;
-                padding: 8px;
-                background: #CBD5E0;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-            ">Cancel</button>
-        </div>
-    `;
-
-    modal.appendChild(form);
-
-    // Handle form submission 
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const nameInput = document.getElementById('stageName') as HTMLInputElement;
-        const colorInput = document.getElementById('stageColor') as HTMLInputElement;
-        
-        const newStage: PipelineStage = {
-            id: Date.now().toString(),
-            name: nameInput.value,
-            color: colorInput.value
-        };
-
-        // Get current stages and add new one
-        chrome.storage.sync.get(['pipelineStages'], (result) => {
-            const currentStages: PipelineStage[] = result.pipelineStages || defaultStages;
-            const updatedStages = [...currentStages, newStage];
-            
-            // Save updated stages
-            chrome.storage.sync.set({ pipelineStages: updatedStages }, () => {
-                // Add new stage to UI
-                const stagesContainer = document.getElementById('pipeline-stages');
-                if (stagesContainer) {
-                    stagesContainer.appendChild(createStageElement(newStage));
-                }
-                
-                // Remove modal that we created when we clicked on Add Stage button
-                document.body.removeChild(modal);
-                document.body.removeChild(overlay);
-            });
-        });
-    });
-
-    // Handle cancel
-    const cancelBtn = form.querySelector('#cancelBtn');
-    cancelBtn?.addEventListener('click', () => {
-        document.body.removeChild(modal);
-        document.body.removeChild(overlay);
-    });
-
-    // Add modal and overlay to page
-    document.body.appendChild(overlay);
-    document.body.appendChild(modal);
-}
 
 // For Sidebar
 async function createSidebar() {
@@ -415,32 +304,32 @@ async function createSidebar() {
     contentSection.appendChild(stagesContainer);
 
     // Footer with Add Stage button
-    const footerSection = document.createElement('div');
-    footerSection.style.cssText = `
-        padding: 16px;
-        border-top: 1px solid #e5e7eb;
-        background: white;
-    `;
+    // const footerSection = document.createElement('div');
+    // footerSection.style.cssText = `
+    //     padding: 16px;
+    //     border-top: 1px solid #e5e7eb;
+    //     background: white;
+    // `;
 
-    const addButton = document.createElement('button');
-    addButton.textContent = '+ Add Stage';
-    addButton.style.cssText = `
-        width: 100%;
-        padding: 8px;
-        background: #4299E1;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    `;
-    addButton.addEventListener('click', createAddStageForm);
-    footerSection.appendChild(addButton);
+    // const addButton = document.createElement('button');
+    // addButton.textContent = '+ Add Stage';
+    // addButton.style.cssText = `
+    //     width: 100%;
+    //     padding: 8px;
+    //     background: #4299E1;
+    //     color: white;
+    //     border: none;
+    //     border-radius: 4px;
+    //     cursor: pointer;
+    //     transition: background-color 0.2s;
+    // `;
+    // addButton.addEventListener('click', createAddStageForm);
+    // footerSection.appendChild(addButton);
 
     // Assemble sidebar
     sidebar.appendChild(pipelineOverview);
     sidebar.appendChild(contentSection);
-    sidebar.appendChild(footerSection);
+    //sidebar.appendChild(footerSection);
 
     // Add to page
     document.body.appendChild(sidebar);
