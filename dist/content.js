@@ -184,7 +184,7 @@ function createStageElement(stage) {
 // For Sidebar
 function createSidebar() {
     return __awaiter(this, void 0, void 0, function () {
-        var sidebar, pipelineOverview, stages, contentSection, stagesContainer, gmailContent;
+        var sidebar, pipelineOverview, stages, stagesForStage, currentStages, _i, currentStages_1, stagessss, stageElement, countElement, currentCount, contentSection, stagesContainer, gmailContent;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -194,13 +194,35 @@ function createSidebar() {
                     pipelineOverview = document.createElement('div');
                     pipelineOverview.style.cssText = "\n        display: flex;\n        width: 100%;\n        height: 60px;\n        background: linear-gradient(90deg, \n            #4B5563 0%, \n            #60A5FA 20%, \n            #C084FC 40%, \n            #EF4444 60%, \n            #34D399 80%, \n            #FCD34D 100%\n        );\n        color: white;\n        font-size: 13px;\n    ";
                     stages = [defaultStages];
+                    return [4 /*yield*/, chrome.storage.sync.get(['pipelineStages'])];
+                case 1:
+                    stagesForStage = _a.sent();
+                    currentStages = stagesForStage.pipelineStages || defaultStages;
+                    console.log("stagesForStage:", stagesForStage);
+                    console.log("currentStages", currentStages);
+                    for (_i = 0, currentStages_1 = currentStages; _i < currentStages_1.length; _i++) {
+                        stagessss = currentStages_1[_i];
+                        console.log(stagessss);
+                        stageElement = document.querySelector("[data-stage-id=\"".concat(stagessss.id, "\"]"));
+                        console.log("Stage Element inside Sidebar", stageElement);
+                        //const stageDiv: HTMLElement = document.createElement('div');
+                        if (stageElement) {
+                            countElement = stageElement.querySelector('.stage-count');
+                            if (countElement) {
+                                currentCount = parseInt(countElement.textContent || '0');
+                                countElement.textContent = (currentCount + 1).toString();
+                                console.log("Called Stage Counts from Sidebar", countElement);
+                            }
+                        }
+                    }
                     stages[0].forEach(function (stage) {
                         var segment = document.createElement('div');
                         segment.style.cssText = "\n            flex: 1;\n            display: flex;\n            flex-direction: column;\n            justify-content: center;\n            align-items: center;\n            text-align: center;\n            padding: 8px 4px;\n            position: relative;\n        ";
                         // Add count
                         var count = document.createElement('div');
                         count.textContent = '0';
-                        count.style.cssText = "\n            font-size: 18px;\n            font-weight: bold;\n            margin-bottom: 4px;\n        ";
+                        count.className = "header-count-".concat(stage.id); // Add this line
+                        count.style.cssText = "\n        font-size: 18px;\n        font-weight: bold;\n        margin-bottom: 4px;\n    ";
                         // Add stage name
                         var name = document.createElement('div');
                         name.textContent = stage.name;
@@ -254,7 +276,7 @@ function createSidebar() {
                         });
                     });
                     return [4 /*yield*/, loadSavedEmails()];
-                case 1:
+                case 2:
                     _a.sent();
                     return [2 /*return*/];
             }
@@ -265,7 +287,7 @@ function createSidebar() {
 // Update addEmailToStage function to match your UI
 function addEmailToStage(emailData, stage, stageDiv) {
     return __awaiter(this, void 0, void 0, function () {
-        var saved, emailsContainer, existingEmailInUI, truncateText, emailDiv_1, sender_1, subjectText_1, timestamp, countElement, currentCount, error_3;
+        var saved, emailsContainer, existingEmailInUI, truncateText, emailDiv_1, sender_1, subjectText_1, timestamp, countElement, currentCount, headerCount, error_3;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -283,6 +305,7 @@ function addEmailToStage(emailData, stage, stageDiv) {
                         return [2 /*return*/];
                     }
                     existingEmailInUI = emailsContainer.querySelector("[data-email-id=\"".concat(emailData.id, "\"]"));
+                    console.log("Existing Email Data: ", existingEmailInUI);
                     if (existingEmailInUI) {
                         console.log('Email already displayed in UI, skipping render');
                         return [2 /*return*/];
@@ -336,6 +359,12 @@ function addEmailToStage(emailData, stage, stageDiv) {
                     if (countElement) {
                         currentCount = parseInt(countElement.textContent || '0');
                         countElement.textContent = (currentCount + 1).toString();
+                        console.log("Added Counts for Stages", countElement);
+                        headerCount = document.querySelector(".header-count-".concat(stage.id));
+                        if (headerCount) {
+                            headerCount.textContent = (currentCount + 1).toString();
+                            console.log("Updated header count for stage", stage.id, "to", currentCount + 1);
+                        }
                     }
                     return [3 /*break*/, 3];
                 case 2:
@@ -381,7 +410,7 @@ function makeEmailDraggable(emailRow) {
     moveButton.className = 'crm-move-button';
     moveButton.innerHTML = '📋';
     moveButton.title = 'Move to Pipeline';
-    moveButton.style.cssText = "\n            background: #4299E1;\n            color: white;\n            border: none;\n            padding: 4px 8px;\n            border-radius: 4px;\n            font-size: 12px;\n            cursor: pointer;\n            margin-right: 8px;\n            position: relative;\n            z-index: 9999;\n            display: inline-block;\n            opacity: 1;\n        ";
+    moveButton.style.cssText = "\n                   background: linear-gradient(90deg, \n            #4B5563 0%, \n            #60A5FA 20%, \n            #C084FC 40%, \n            #EF4444 60%, \n            #34D399 80%, \n            #FCD34D 100%\n        );\n            color: white;\n            border: none;\n            padding: 4px 8px;\n            border-radius: 4px;\n            font-size: 12px;\n            cursor: pointer;\n            margin-right: 8px;\n            position: relative;\n            z-index: 9999;\n            display: inline-block;\n            opacity: 1;\n        ";
     // Target the first TD which contains the checkbox
     var firstCell = emailRow.querySelector('td:first-child');
     if (firstCell) {
@@ -506,7 +535,7 @@ function showStageSelectionPopup(emailData, x, y) {
 // Update the loadSavedEmails function to use StorageUtils
 function loadSavedEmails() {
     return __awaiter(this, void 0, void 0, function () {
-        var stages, currentStages, _loop_1, _i, currentStages_1, stage, error_4;
+        var stages, currentStages, _loop_1, _i, currentStages_2, stage, error_4;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -516,20 +545,31 @@ function loadSavedEmails() {
                     stages = _a.sent();
                     currentStages = stages.pipelineStages || defaultStages;
                     _loop_1 = function (stage) {
-                        var emails, stageElement, countElement, emailsContainer;
+                        var emails, stageElement, countElement, headerCount, emailsContainer;
                         return __generator(this, function (_b) {
                             switch (_b.label) {
-                                case 0: return [4 /*yield*/, StorageUtils.loadStageEmails(stage.id)];
+                                case 0:
+                                    console.log("stage Called from loadSavedEmails", stage);
+                                    return [4 /*yield*/, StorageUtils.loadStageEmails(stage.id)];
                                 case 1:
                                     emails = _b.sent();
+                                    console.log("Emails inside LoadSavedEmails:", emails);
                                     stageElement = document.querySelector("[data-stage-id=\"".concat(stage.id, "\"]"));
+                                    console.log("Stage Element Called from the Load Saved emails", stageElement);
                                     if (stageElement) {
                                         countElement = stageElement.querySelector('.stage-count');
+                                        console.log("Count Element Called from Stage Element", countElement);
                                         if (countElement) {
                                             console.log("Count Element Cleared");
                                             countElement.textContent = '0';
+                                            headerCount = document.querySelector(".header-count-".concat(stage.id));
+                                            if (headerCount) {
+                                                headerCount.textContent = '0';
+                                                console.log("Cleared header count for stage", stage.id);
+                                            }
                                         }
                                         emailsContainer = stageElement.querySelector('.stage-emails-container');
+                                        console.log("Email Container Called within Stage Element Debug: ", emailsContainer);
                                         if (emailsContainer) {
                                             console.log("Email Container Cleared");
                                             emailsContainer.innerHTML = '';
@@ -543,11 +583,11 @@ function loadSavedEmails() {
                             }
                         });
                     };
-                    _i = 0, currentStages_1 = currentStages;
+                    _i = 0, currentStages_2 = currentStages;
                     _a.label = 2;
                 case 2:
-                    if (!(_i < currentStages_1.length)) return [3 /*break*/, 5];
-                    stage = currentStages_1[_i];
+                    if (!(_i < currentStages_2.length)) return [3 /*break*/, 5];
+                    stage = currentStages_2[_i];
                     return [5 /*yield**/, _loop_1(stage)];
                 case 3:
                     _a.sent();

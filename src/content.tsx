@@ -245,7 +245,25 @@ async function createSidebar() {
 
     // Create stage segments
     const stages = [defaultStages];
-
+    const stagesForStage = await chrome.storage.sync.get(['pipelineStages']);
+    const currentStages = stagesForStage.pipelineStages || defaultStages;
+    console.log("stagesForStage:", stagesForStage);
+    console.log("currentStages", currentStages);
+    for (const stagessss of currentStages) {
+    console.log(stagessss)    
+    const stageElement = document.querySelector(`[data-stage-id="${stagessss.id}"]`);
+    console.log("Stage Element inside Sidebar", stageElement)
+    //const stageDiv: HTMLElement = document.createElement('div');
+    if(stageElement){
+    const countElement = stageElement.querySelector('.stage-count') ;
+    if (countElement) {
+        const currentCount = parseInt(countElement.textContent || '0');
+        
+        countElement.textContent = (currentCount + 1).toString();
+        console.log("Called Stage Counts from Sidebar", countElement);
+    }
+}
+}
     stages[0].forEach(stage => {
         const segment = document.createElement('div');
         segment.style.cssText = `
@@ -258,15 +276,16 @@ async function createSidebar() {
             padding: 8px 4px;
             position: relative;
         `;
-
+      
         // Add count
-        const count = document.createElement('div');
-        count.textContent = '0';
-        count.style.cssText = `
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 4px;
-        `;
+    const count = document.createElement('div');
+    count.textContent = '0';
+    count.className = `header-count-${stage.id}`; // Add this line
+    count.style.cssText = `
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 4px;
+    `;
 
         // Add stage name
         const name = document.createElement('div');
@@ -369,6 +388,7 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
 
         // Check for existing email
         const existingEmailInUI = emailsContainer.querySelector(`[data-email-id="${emailData.id}"]`);
+        console.log("Existing Email Data: ", existingEmailInUI)
         if (existingEmailInUI) {
             console.log('Email already displayed in UI, skipping render');
             return;
@@ -461,6 +481,14 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
         if (countElement) {
             const currentCount = parseInt(countElement.textContent || '0');
             countElement.textContent = (currentCount + 1).toString();
+            console.log("Added Counts for Stages", countElement);
+
+               // Add this section to update header count
+            const headerCount = document.querySelector(`.header-count-${stage.id}`);
+            if (headerCount) {
+                headerCount.textContent = (currentCount + 1).toString();
+                console.log("Updated header count for stage", stage.id, "to", currentCount + 1);
+            }
         }
     } catch(error) {
         console.error('Error in addEmailToStage:', error);
@@ -510,7 +538,14 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
         moveButton.innerHTML = '📋';
         moveButton.title = 'Move to Pipeline';
         moveButton.style.cssText = `
-            background: #4299E1;
+                   background: linear-gradient(90deg, 
+            #4B5563 0%, 
+            #60A5FA 20%, 
+            #C084FC 40%, 
+            #EF4444 60%, 
+            #34D399 80%, 
+            #FCD34D 100%
+        );
             color: white;
             border: none;
             padding: 4px 8px;
@@ -671,19 +706,30 @@ async function loadSavedEmails() {
         const currentStages = stages.pipelineStages || defaultStages;
         
         for (const stage of currentStages) {
+            console.log("stage Called from loadSavedEmails", stage)
             const emails = await StorageUtils.loadStageEmails(stage.id);
+            console.log("Emails inside LoadSavedEmails:", emails);
+            //It grabs the Div for Stages in Sidebar
             const stageElement = document.querySelector(`[data-stage-id="${stage.id}"]`);
-            
+            console.log("Stage Element Called from the Load Saved emails", stageElement)
             if (stageElement) {
                 // Clear existing count
                 const countElement = stageElement.querySelector('.stage-count');
+                console.log("Count Element Called from Stage Element", countElement)
                 if (countElement) {
                     console.log("Count Element Cleared")
                     countElement.textContent = '0';
+                      // Add this section to clear header count
+                    const headerCount = document.querySelector(`.header-count-${stage.id}`);
+                    if (headerCount) {
+                        headerCount.textContent = '0';
+                        console.log("Cleared header count for stage", stage.id);
+                    }
                 }
                 
                 // Clear existing emails from UI
                 const emailsContainer = stageElement.querySelector('.stage-emails-container');
+                console.log("Email Container Called within Stage Element Debug: ", emailsContainer)
                 if (emailsContainer) {
                     console.log("Email Container Cleared")
                     emailsContainer.innerHTML = '';
