@@ -122,7 +122,7 @@ function createStageElement(stage: PipelineStage) {
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     `;
 
-    // Create the header with your existing UI structure
+    // Create the header with arrow indicator
     const headerDiv = document.createElement('div');
     headerDiv.style.cssText = `
         padding: 10px;
@@ -132,10 +132,18 @@ function createStageElement(stage: PipelineStage) {
         border-left: 4px solid ${stage.color};
         border-radius: 4px;
         background: white;
+        cursor: pointer;
     `;
 
+    // Modified header structure to include arrow
     headerDiv.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+            <span style="
+                transform: rotate(-90deg);
+                transition: transform 0.2s;
+                font-size: 12px;
+                color: #666;
+            ">▼</span>
             <span>${stage.name}</span>
             <span class="stage-count">0</span>
         </div>
@@ -158,10 +166,24 @@ function createStageElement(stage: PipelineStage) {
         display: flex;
         flex-direction: column;
         gap: 8px;
+        display: none; /* Initially hidden */
     `;
 
     stageDiv.appendChild(headerDiv);
     stageDiv.appendChild(emailsContainer);
+
+    // Add collapse/expand functionality
+    const arrow = headerDiv.querySelector('span');
+    headerDiv.addEventListener('click', (e) => {
+        // Ignore clicks on delete button
+        if (!(e.target as HTMLElement).closest('.delete-stage')) {
+            const isExpanded = emailsContainer.style.display !== 'none';
+            emailsContainer.style.display = isExpanded ? 'none' : 'flex';
+            if (arrow) {
+                arrow.style.transform = isExpanded ? 'rotate(-90deg)' : 'rotate(0deg)';
+            }
+        }
+    });
 
     // Add existing delete functionality
     const deleteBtn = headerDiv.querySelector('.delete-stage');
@@ -298,7 +320,6 @@ function createStageElement(stage: PipelineStage) {
 
 // For Sidebar
 async function createSidebar() {
-    console.log('Creating sidebar');
     const sidebar = document.createElement('div');
     sidebar.id = 'gmail-crm-sidebar';
     sidebar.style.cssText = `
@@ -312,31 +333,75 @@ async function createSidebar() {
         z-index: 1000;
         display: flex;
         flex-direction: column;
-        overflow: hidden; /* Important: prevent double scrollbars */
+        overflow: hidden;
     `;
 
-    // Header section
-    const headerSection = document.createElement('div');
-    headerSection.style.cssText = `
-        padding: 16px 20px;
-        border-bottom: 1px solid #e5e7eb;
-        background: white;
-        flex-shrink: 0;
+    // Create pipeline overview header
+    const pipelineOverview = document.createElement('div');
+    pipelineOverview.style.cssText = `
+        display: flex;
+        width: 100%;
+        height: 60px;
+        background: linear-gradient(90deg, 
+            #4B5563 0%, 
+            #60A5FA 20%, 
+            #C084FC 40%, 
+            #EF4444 60%, 
+            #34D399 80%, 
+            #FCD34D 100%
+        );
+        color: white;
+        font-size: 13px;
     `;
-    
-    const title = document.createElement('h2');
-    title.textContent = 'CRM Pipeline';
-    title.style.cssText = 'margin: 0; font-weight: bold; color: #2d3748; font-size: 16px;';
-    headerSection.appendChild(title);
-    sidebar.appendChild(headerSection);
 
-    // Scrollable content section
+    // Create stage segments
+    const stages = [defaultStages];
+
+    stages[0].forEach(stage => {
+        const segment = document.createElement('div');
+        segment.style.cssText = `
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 8px 4px;
+            position: relative;
+        `;
+
+        // Add count
+        const count = document.createElement('div');
+        count.textContent = '0';
+        count.style.cssText = `
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        `;
+
+        // Add stage name
+        const name = document.createElement('div');
+        name.textContent = stage.name;
+        name.style.cssText = `
+            font-size: 11px;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        `;
+
+        segment.appendChild(count);
+        segment.appendChild(name);
+        pipelineOverview.appendChild(segment);
+    });
+
+    // Content section
     const contentSection = document.createElement('div');
     contentSection.style.cssText = `
         flex: 1;
         overflow-y: auto;
         padding: 16px;
-        height: calc(100vh - 120px); /* Account for header and footer */
     `;
 
     // Stages container
@@ -348,15 +413,13 @@ async function createSidebar() {
         gap: 16px;
     `;
     contentSection.appendChild(stagesContainer);
-    sidebar.appendChild(contentSection);
 
-    // Footer section with Add Stage button
+    // Footer with Add Stage button
     const footerSection = document.createElement('div');
     footerSection.style.cssText = `
-        padding: 16px 20px;
+        padding: 16px;
         border-top: 1px solid #e5e7eb;
         background: white;
-        flex-shrink: 0;
     `;
 
     const addButton = document.createElement('button');
@@ -369,15 +432,14 @@ async function createSidebar() {
         border: none;
         border-radius: 4px;
         cursor: pointer;
-        font-size: 14px;
-        font-weight: 500;
         transition: background-color 0.2s;
-        &:hover {
-            background: #3182ce;
-        }
     `;
     addButton.addEventListener('click', createAddStageForm);
     footerSection.appendChild(addButton);
+
+    // Assemble sidebar
+    sidebar.appendChild(pipelineOverview);
+    sidebar.appendChild(contentSection);
     sidebar.appendChild(footerSection);
 
     // Add to page
@@ -389,7 +451,7 @@ async function createSidebar() {
         gmailContent.style.marginRight = '450px';
     }
 
-    // Load stages from storage
+    // Load stages
     chrome.storage.sync.get(['pipelineStages'], (result) => {
         const stages = result.pipelineStages || defaultStages;
         stages.forEach((stage: PipelineStage) => {
@@ -399,7 +461,6 @@ async function createSidebar() {
 
     await loadSavedEmails();
 }
-
 // Add this new function to handle adding emails to stages
 // Update addEmailToStage function to match your UI
 async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stageDiv: HTMLElement) {
@@ -453,7 +514,8 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
         `;
 
         // Format sender, subject and timestamp
-        const sender = truncateText(emailData.sender.split('@')[0], 15);
+        //const sender = truncateText(emailData.sender.split('@')[0], 5);
+        const sender = truncateText(emailData.sender, 5);
         const subjectText = truncateText(emailData.subject, 30);
         const timestamp = new Date(emailData.timestamp).toLocaleDateString();
 
@@ -465,13 +527,13 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
             <div style="flex: 0 0 150px; overflow: hidden;" class="sender-cell">
                 ${typeof sender === 'string' ? sender : sender.short}
                 ${typeof sender === 'object' ? 
-                    `<button class="see-more-btn" style="color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;">...</button>` 
+                    `<button class="see-more-btn" style="color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;">see more</button>` 
                     : ''}
             </div>
             <div style="flex: 1; overflow: hidden;" class="subject-cell">
                 ${typeof subjectText === 'string' ? subjectText : subjectText.short}
                 ${typeof subjectText === 'object' ? 
-                    `<button class="see-more-btn" style="color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;">...</button>` 
+                    `<button class="see-more-btn" style="color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;">see more</button>` 
                     : ''}
             </div>
             <div style="flex: 0 0 100px; text-align: right; color: #6B7280;">

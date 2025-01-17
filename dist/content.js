@@ -150,16 +150,29 @@ function createStageElement(stage) {
     stageDiv.className = 'pipeline-stage';
     stageDiv.setAttribute('data-stage-id', stage.id);
     stageDiv.style.cssText = "\n        margin-bottom: 10px;\n        background: white;\n        border-radius: 4px;\n        box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n    ";
-    // Create the header with your existing UI structure
+    // Create the header with arrow indicator
     var headerDiv = document.createElement('div');
-    headerDiv.style.cssText = "\n        padding: 10px;\n        display: flex;\n        justify-content: space-between;\n        align-items: center;\n        border-left: 4px solid ".concat(stage.color, ";\n        border-radius: 4px;\n        background: white;\n    ");
-    headerDiv.innerHTML = "\n        <div style=\"display: flex; align-items: center; gap: 8px;\">\n            <span>".concat(stage.name, "</span>\n            <span class=\"stage-count\">0</span>\n        </div>\n        <button class=\"delete-stage\" style=\"\n            background: none;\n            border: none;\n            color: #ff4444;\n            cursor: pointer;\n            font-size: 18px;\n            padding: 0 4px;\n        \">\u00D7</button>\n    ");
+    headerDiv.style.cssText = "\n        padding: 10px;\n        display: flex;\n        justify-content: space-between;\n        align-items: center;\n        border-left: 4px solid ".concat(stage.color, ";\n        border-radius: 4px;\n        background: white;\n        cursor: pointer;\n    ");
+    // Modified header structure to include arrow
+    headerDiv.innerHTML = "\n        <div style=\"display: flex; align-items: center; gap: 8px; flex: 1;\">\n            <span style=\"\n                transform: rotate(-90deg);\n                transition: transform 0.2s;\n                font-size: 12px;\n                color: #666;\n            \">\u25BC</span>\n            <span>".concat(stage.name, "</span>\n            <span class=\"stage-count\">0</span>\n        </div>\n        <button class=\"delete-stage\" style=\"\n            background: none;\n            border: none;\n            color: #ff4444;\n            cursor: pointer;\n            font-size: 18px;\n            padding: 0 4px;\n        \">\u00D7</button>\n    ");
     // Create a container for emails that will appear below the header
     var emailsContainer = document.createElement('div');
     emailsContainer.className = 'stage-emails-container';
-    emailsContainer.style.cssText = "\n        padding: 8px;\n        margin-top: 4px;\n        display: flex;\n        flex-direction: column;\n        gap: 8px;\n    ";
+    emailsContainer.style.cssText = "\n        padding: 8px;\n        margin-top: 4px;\n        display: flex;\n        flex-direction: column;\n        gap: 8px;\n        display: none; /* Initially hidden */\n    ";
     stageDiv.appendChild(headerDiv);
     stageDiv.appendChild(emailsContainer);
+    // Add collapse/expand functionality
+    var arrow = headerDiv.querySelector('span');
+    headerDiv.addEventListener('click', function (e) {
+        // Ignore clicks on delete button
+        if (!e.target.closest('.delete-stage')) {
+            var isExpanded = emailsContainer.style.display !== 'none';
+            emailsContainer.style.display = isExpanded ? 'none' : 'flex';
+            if (arrow) {
+                arrow.style.transform = isExpanded ? 'rotate(-90deg)' : 'rotate(0deg)';
+            }
+        }
+    });
     // Add existing delete functionality
     var deleteBtn = headerDiv.querySelector('.delete-stage');
     deleteBtn === null || deleteBtn === void 0 ? void 0 : deleteBtn.addEventListener('click', function (e) {
@@ -225,35 +238,47 @@ function createAddStageForm() {
 // For Sidebar
 function createSidebar() {
     return __awaiter(this, void 0, void 0, function () {
-        var sidebar, headerSection, title, contentSection, stagesContainer, footerSection, addButton, gmailContent;
+        var sidebar, pipelineOverview, stages, contentSection, stagesContainer, footerSection, addButton, gmailContent;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    console.log('Creating sidebar');
                     sidebar = document.createElement('div');
                     sidebar.id = 'gmail-crm-sidebar';
-                    sidebar.style.cssText = "\n        position: fixed;\n        right: 0;\n        top: 0;\n        width: 450px;\n        height: 100%;\n        background: #f8fafc;\n        box-shadow: -2px 0 5px rgba(0,0,0,0.1);\n        z-index: 1000;\n        display: flex;\n        flex-direction: column;\n        overflow: hidden; /* Important: prevent double scrollbars */\n    ";
-                    headerSection = document.createElement('div');
-                    headerSection.style.cssText = "\n        padding: 16px 20px;\n        border-bottom: 1px solid #e5e7eb;\n        background: white;\n        flex-shrink: 0;\n    ";
-                    title = document.createElement('h2');
-                    title.textContent = 'CRM Pipeline';
-                    title.style.cssText = 'margin: 0; font-weight: bold; color: #2d3748; font-size: 16px;';
-                    headerSection.appendChild(title);
-                    sidebar.appendChild(headerSection);
+                    sidebar.style.cssText = "\n        position: fixed;\n        right: 0;\n        top: 0;\n        width: 450px;\n        height: 100%;\n        background: #f8fafc;\n        box-shadow: -2px 0 5px rgba(0,0,0,0.1);\n        z-index: 1000;\n        display: flex;\n        flex-direction: column;\n        overflow: hidden;\n    ";
+                    pipelineOverview = document.createElement('div');
+                    pipelineOverview.style.cssText = "\n        display: flex;\n        width: 100%;\n        height: 60px;\n        background: linear-gradient(90deg, \n            #4B5563 0%, \n            #60A5FA 20%, \n            #C084FC 40%, \n            #EF4444 60%, \n            #34D399 80%, \n            #FCD34D 100%\n        );\n        color: white;\n        font-size: 13px;\n    ";
+                    stages = [defaultStages];
+                    stages[0].forEach(function (stage) {
+                        var segment = document.createElement('div');
+                        segment.style.cssText = "\n            flex: 1;\n            display: flex;\n            flex-direction: column;\n            justify-content: center;\n            align-items: center;\n            text-align: center;\n            padding: 8px 4px;\n            position: relative;\n        ";
+                        // Add count
+                        var count = document.createElement('div');
+                        count.textContent = '0';
+                        count.style.cssText = "\n            font-size: 18px;\n            font-weight: bold;\n            margin-bottom: 4px;\n        ";
+                        // Add stage name
+                        var name = document.createElement('div');
+                        name.textContent = stage.name;
+                        name.style.cssText = "\n            font-size: 11px;\n            line-height: 1.2;\n            white-space: nowrap;\n            overflow: hidden;\n            text-overflow: ellipsis;\n            max-width: 100%;\n        ";
+                        segment.appendChild(count);
+                        segment.appendChild(name);
+                        pipelineOverview.appendChild(segment);
+                    });
                     contentSection = document.createElement('div');
-                    contentSection.style.cssText = "\n        flex: 1;\n        overflow-y: auto;\n        padding: 16px;\n        height: calc(100vh - 120px); /* Account for header and footer */\n    ";
+                    contentSection.style.cssText = "\n        flex: 1;\n        overflow-y: auto;\n        padding: 16px;\n    ";
                     stagesContainer = document.createElement('div');
                     stagesContainer.id = 'pipeline-stages';
                     stagesContainer.style.cssText = "\n        display: flex;\n        flex-direction: column;\n        gap: 16px;\n    ";
                     contentSection.appendChild(stagesContainer);
-                    sidebar.appendChild(contentSection);
                     footerSection = document.createElement('div');
-                    footerSection.style.cssText = "\n        padding: 16px 20px;\n        border-top: 1px solid #e5e7eb;\n        background: white;\n        flex-shrink: 0;\n    ";
+                    footerSection.style.cssText = "\n        padding: 16px;\n        border-top: 1px solid #e5e7eb;\n        background: white;\n    ";
                     addButton = document.createElement('button');
                     addButton.textContent = '+ Add Stage';
-                    addButton.style.cssText = "\n        width: 100%;\n        padding: 8px;\n        background: #4299E1;\n        color: white;\n        border: none;\n        border-radius: 4px;\n        cursor: pointer;\n        font-size: 14px;\n        font-weight: 500;\n        transition: background-color 0.2s;\n        &:hover {\n            background: #3182ce;\n        }\n    ";
+                    addButton.style.cssText = "\n        width: 100%;\n        padding: 8px;\n        background: #4299E1;\n        color: white;\n        border: none;\n        border-radius: 4px;\n        cursor: pointer;\n        transition: background-color 0.2s;\n    ";
                     addButton.addEventListener('click', createAddStageForm);
                     footerSection.appendChild(addButton);
+                    // Assemble sidebar
+                    sidebar.appendChild(pipelineOverview);
+                    sidebar.appendChild(contentSection);
                     sidebar.appendChild(footerSection);
                     // Add to page
                     document.body.appendChild(sidebar);
@@ -261,7 +286,7 @@ function createSidebar() {
                     if (gmailContent) {
                         gmailContent.style.marginRight = '450px';
                     }
-                    // Load stages from storage
+                    // Load stages
                     chrome.storage.sync.get(['pipelineStages'], function (result) {
                         var stages = result.pipelineStages || defaultStages;
                         stages.forEach(function (stage) {
@@ -314,14 +339,14 @@ function addEmailToStage(emailData, stage, stageDiv) {
                     emailDiv_1.className = 'pipeline-email';
                     emailDiv_1.setAttribute('data-email-id', emailData.id);
                     emailDiv_1.style.cssText = "\n            padding: 8px 16px;\n            cursor: pointer;\n            font-size: 13px;\n            display: flex;\n            align-items: center;\n            border-bottom: 1px solid #E5E7EB;\n            min-height: 40px;\n        ";
-                    sender_1 = truncateText(emailData.sender.split('@')[0], 15);
+                    sender_1 = truncateText(emailData.sender, 5);
                     subjectText_1 = truncateText(emailData.subject, 30);
                     timestamp = new Date(emailData.timestamp).toLocaleDateString();
                     // Create the row content
                     emailDiv_1.innerHTML = "\n            <div style=\"flex: 0 0 30px;\">\n                <input type=\"checkbox\" style=\"margin: 0;\">\n            </div>\n            <div style=\"flex: 0 0 150px; overflow: hidden;\" class=\"sender-cell\">\n                ".concat(typeof sender_1 === 'string' ? sender_1 : sender_1.short, "\n                ").concat(typeof sender_1 === 'object' ?
-                        "<button class=\"see-more-btn\" style=\"color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;\">...</button>"
+                        "<button class=\"see-more-btn\" style=\"color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;\">see more</button>"
                         : '', "\n            </div>\n            <div style=\"flex: 1; overflow: hidden;\" class=\"subject-cell\">\n                ").concat(typeof subjectText_1 === 'string' ? subjectText_1 : subjectText_1.short, "\n                ").concat(typeof subjectText_1 === 'object' ?
-                        "<button class=\"see-more-btn\" style=\"color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;\">...</button>"
+                        "<button class=\"see-more-btn\" style=\"color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;\">see more</button>"
                         : '', "\n            </div>\n            <div style=\"flex: 0 0 100px; text-align: right; color: #6B7280;\">\n                ").concat(timestamp, "\n            </div>\n        ");
                     // Add "See More" functionality
                     emailDiv_1.querySelectorAll('.see-more-btn').forEach(function (btn) {
