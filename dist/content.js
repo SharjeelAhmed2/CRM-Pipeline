@@ -326,7 +326,7 @@ function addEmailToStage(emailData, stage, stageDiv) {
                     subjectText_1 = truncateText(emailData.subject, 30);
                     timestamp = new Date(emailData.timestamp).toLocaleDateString();
                     // Create the row content
-                    emailDiv_1.innerHTML = "\n            <div style=\"flex: 0 0 30px;\">\n                <input type=\"checkbox\" style=\"margin: 0;\">\n            </div>\n            <div style=\"flex: 0 0 150px; overflow: hidden;\" class=\"sender-cell\">\n                ".concat(typeof sender_1 === 'string' ? sender_1 : sender_1.short, "\n                ").concat(typeof sender_1 === 'object' ?
+                    emailDiv_1.innerHTML = "\n            <div style=\"flex: 0 0 30px;\">\n                <input type=\"checkbox\" style=\"margin: 0;\">\n            </div>\n            <div style=\"flex: 1 1 100px; overflow: hidden; padding-right: 5px;\" class=\"sender-cell\">\n                ".concat(typeof sender_1 === 'string' ? sender_1 : sender_1.short, "\n                ").concat(typeof sender_1 === 'object' ?
                         "<button class=\"see-more-btn\" style=\"color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;\">see more</button>"
                         : '', "\n            </div>\n            <div style=\"flex: 1; overflow: hidden;\" class=\"subject-cell\">\n                ").concat(typeof subjectText_1 === 'string' ? subjectText_1 : subjectText_1.short, "\n                ").concat(typeof subjectText_1 === 'object' ?
                         "<button class=\"see-more-btn\" style=\"color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;\">see more</button>"
@@ -497,9 +497,47 @@ function makeEmailDraggable(emailRow) {
 function showStageSelectionPopup(emailData, x, y) {
     var _this = this;
     console.log('Opening stage selection popup with data:', emailData);
+    // Remove any existing popups first
+    var existingPopup = document.querySelector('.stage-selection-popup');
+    if (existingPopup) {
+        existingPopup.remove();
+    }
+    // Find the button that was clicked (the parent element with crm-move-button class)
+    var button = document.querySelector('.crm-move-button:hover');
+    if (!button) {
+        console.log('Button not found');
+        return;
+    }
+    // Get the button's position relative to the document
+    var buttonRect = button.getBoundingClientRect();
     var popup = document.createElement('div');
     popup.className = 'stage-selection-popup';
-    popup.style.cssText = "\n        position: fixed;\n        left: ".concat(x, "px;\n        top: ").concat(y, "px;\n        background: white;\n        border-radius: 8px;\n        box-shadow: 0 2px 10px rgba(0,0,0,0.1);\n        padding: 8px;\n        z-index: 10000;\n    ");
+    popup.style.cssText = "\n        position: absolute;  /* Changed from fixed */\n        left: ".concat(x + window.scrollX, "px;  /* Add scrollX */\n        top: ").concat(y + window.scrollY, "px;   /* Add scrollY */\n        background: white;\n        border-radius: 8px;\n        box-shadow: 0 2px 10px rgba(0,0,0,0.1);\n        padding: 8px;\n        z-index: 10000;\n    ");
+    // Add scroll event listener to update popup position
+    var updatePosition = function () {
+        var newRect = button.getBoundingClientRect();
+        popup.style.left = "".concat(newRect.right + 10, "px");
+        popup.style.top = "".concat(newRect.top, "px");
+    };
+    // Listen for scroll events on the main Gmail container
+    var gmailContainer = document.querySelector('.bkK');
+    if (gmailContainer) {
+        gmailContainer.addEventListener('scroll', updatePosition, true);
+    }
+    // Add click event listener to document
+    var closePopup = function (e) {
+        if (!popup.contains(e.target)) {
+            popup.remove();
+            document.removeEventListener('click', closePopup);
+            if (gmailContainer) {
+                gmailContainer.removeEventListener('scroll', updatePosition, true);
+            }
+        }
+    };
+    // Delay adding the click listener to prevent immediate closure
+    setTimeout(function () {
+        document.addEventListener('click', closePopup);
+    }, 0);
     chrome.storage.sync.get(['pipelineStages'], function (result) {
         console.log('Retrieved stages:', result.pipelineStages);
         var stages = result.pipelineStages || defaultStages;
@@ -521,6 +559,10 @@ function showStageSelectionPopup(emailData, x, y) {
                             _a.label = 2;
                         case 2:
                             popup.remove();
+                            document.removeEventListener('click', closePopup);
+                            if (gmailContainer) {
+                                gmailContainer.removeEventListener('scroll', updatePosition, true);
+                            }
                             return [2 /*return*/];
                     }
                 });

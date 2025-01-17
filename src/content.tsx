@@ -433,7 +433,7 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
             <div style="flex: 0 0 30px;">
                 <input type="checkbox" style="margin: 0;">
             </div>
-            <div style="flex: 0 0 150px; overflow: hidden;" class="sender-cell">
+            <div style="flex: 1 1 100px; overflow: hidden; padding-right: 5px;" class="sender-cell">
                 ${typeof sender === 'string' ? sender : sender.short}
                 ${typeof sender === 'object' ? 
                     `<button class="see-more-btn" style="color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;">see more</button>` 
@@ -655,18 +655,61 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
 function showStageSelectionPopup(emailData: EmailData, x: number, y: number) {
     console.log('Opening stage selection popup with data:', emailData);
     
+    // Remove any existing popups first
+    const existingPopup = document.querySelector('.stage-selection-popup');
+    if (existingPopup) {
+        existingPopup.remove();
+    }
+    
+    // Find the button that was clicked (the parent element with crm-move-button class)
+    const button = document.querySelector('.crm-move-button:hover');
+    if (!button) {
+        console.log('Button not found');
+        return;
+    }
+    // Get the button's position relative to the document
+    const buttonRect = button.getBoundingClientRect();
+
     const popup = document.createElement('div');
     popup.className = 'stage-selection-popup';
     popup.style.cssText = `
-        position: fixed;
-        left: ${x}px;
-        top: ${y}px;
+        position: absolute;  /* Changed from fixed */
+        left: ${x + window.scrollX}px;  /* Add scrollX */
+        top: ${y + window.scrollY}px;   /* Add scrollY */
         background: white;
         border-radius: 8px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         padding: 8px;
         z-index: 10000;
     `;
+    // Add scroll event listener to update popup position
+    const updatePosition = () => {
+        const newRect = button.getBoundingClientRect();
+        popup.style.left = `${newRect.right + 10}px`;
+        popup.style.top = `${newRect.top}px`;
+    };
+
+    // Listen for scroll events on the main Gmail container
+    const gmailContainer = document.querySelector('.bkK');
+    if (gmailContainer) {
+        gmailContainer.addEventListener('scroll', updatePosition, true);
+    }
+    // Add click event listener to document
+    const closePopup = (e: MouseEvent) => {
+        if (!popup.contains(e.target as Node)) {
+            popup.remove();
+            document.removeEventListener('click', closePopup);
+            if (gmailContainer) {
+                gmailContainer.removeEventListener('scroll', updatePosition, true);
+            }
+        }
+    };
+
+
+    // Delay adding the click listener to prevent immediate closure
+    setTimeout(() => {
+        document.addEventListener('click', closePopup);
+    }, 0);
 
     chrome.storage.sync.get(['pipelineStages'], (result) => {
         console.log('Retrieved stages:', result.pipelineStages);
@@ -689,6 +732,10 @@ function showStageSelectionPopup(emailData: EmailData, x: number, y: number) {
                     addEmailToStage(emailData, stage, stageElement as HTMLElement);
                 }
                 popup.remove();
+                document.removeEventListener('click', closePopup);
+                if (gmailContainer) {
+                    gmailContainer.removeEventListener('scroll', updatePosition, true);
+                }
             });
 
             popup.appendChild(option);
