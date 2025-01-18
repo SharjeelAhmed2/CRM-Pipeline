@@ -1,24 +1,30 @@
 {
-    "manifest_version": 3,
-    "name": "Gmail CRM Pipeline",
-    "version": "1.0.0",
-    "description": "CRM Pipeline integration for Gmail",
-    "permissions": [
-      "storage",
-      "activeTab"
-    ],
-    "host_permissions": [
-      "https://mail.google.com/*"
-    ],
-    "action": {
-      "default_popup": "popup.html"
-    },
-    "content_scripts": [{
-        "matches": ["*://mail.google.com/*"],
-        "js": ["content.js"],
-        "run_at": "document_idle"
-    }],
-    "background": {
-      "service_worker": "background.js"
+  "manifest_version": 3,
+  "name": "BOXY",
+  "version": "1.0.0",
+  "description": "Seamlessly handle your Gmail Leads.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://mail.google.com/*"
+  ],
+  "icons": {
+    "128": "icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://mail.google.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
     }
+  ],
+  "background": {
+    "service_worker": "background.js"
   }
+}

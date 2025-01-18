@@ -1,1 +1,0 @@
-{"version":3,"file":"background.js","mappings":";;;;;AAAa;AACb","sources":["webpack://gmail-crm-extension/./src/background.ts"],"sourcesContent":["\"use strict\";\nconsole.log('Look, I just changed');\n"],"names":[],"sourceRoot":""}
