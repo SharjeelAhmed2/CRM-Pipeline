@@ -1,3 +1,5 @@
+
+
 // src/content.tsx
 console.log('Content script starting...');
 
@@ -388,7 +390,7 @@ function updatePipelineHeader(stages: PipelineStage[]) {
 }
 
 // For Sidebar
-async function createSidebar() {
+async function createSidebar(){
     const sidebar = document.createElement('div');
     sidebar.id = 'gmail-crm-sidebar';
     sidebar.style.cssText = `
@@ -426,25 +428,7 @@ async function createSidebar() {
 
     // Create stage segments
   
-//     const stagesForStage = await chrome.storage.sync.get(['pipelineStages']);
-//     const currentStages = stagesForStage.pipelineStages || defaultStages;
-//     console.log("stagesForStage:", stagesForStage);
-//     console.log("currentStages", currentStages);
-//     for (const stagessss of currentStages) {
-//     console.log(stagessss)    
-//     const stageElement = document.querySelector(`[data-stage-id="${stagessss.id}"]`);
-//     console.log("Stage Element inside Sidebar", stageElement)
-//     //const stageDiv: HTMLElement = document.createElement('div');
-//     if(stageElement){
-//     const countElement = stageElement.querySelector('.stage-count') ;
-//     if (countElement) {
-//         const currentCount = parseInt(countElement.textContent || '0');
-        
-//         countElement.textContent = (currentCount + 1).toString();
-//         console.log("Called Stage Counts from Sidebar", countElement);
-//     }
-// }
-// }
+
     const stages = [defaultStages];
     stages[0].forEach(stage => {
         const segment = document.createElement('div');
@@ -571,7 +555,7 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
 
         // Check for existing email
         const existingEmailInUI = emailsContainer.querySelector(`[data-email-id="${emailData.id}"]`);
-        console.log("Existing Email Data: ", existingEmailInUI)
+     //   console.log("Existing Email Data: ", existingEmailInUI)
         if (existingEmailInUI) {
             console.log('Email already displayed in UI, skipping render');
             return;
@@ -664,7 +648,7 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
         if (countElement) {
             const currentCount = parseInt(countElement.textContent || '0');
             countElement.textContent = (currentCount + 1).toString();
-            console.log("Added Counts for Stages", countElement);
+           // console.log("Added Counts for Stages", countElement);
 
                // Add this section to update header count
             const headerCount = document.querySelector(`.header-count-${stage.id}`);
@@ -946,16 +930,16 @@ async function loadSavedEmails() {
         const currentStages = stages.pipelineStages || defaultStages;
         
         for (const stage of currentStages) {
-            console.log("stage Called from loadSavedEmails", stage)
+          //  console.log("stage Called from loadSavedEmails", stage)
             const emails = await StorageUtils.loadStageEmails(stage.id);
-            console.log("Emails inside LoadSavedEmails:", emails);
+       //     console.log("Emails inside LoadSavedEmails:", emails);
             //It grabs the Div for Stages in Sidebar
             const stageElement = document.querySelector(`[data-stage-id="${stage.id}"]`);
-            console.log("Stage Element Called from the Load Saved emails", stageElement)
+            //console.log("Stage Element Called from the Load Saved emails", stageElement)
             if (stageElement) {
                 // Clear existing count
                 const countElement = stageElement.querySelector('.stage-count');
-                console.log("Count Element Called from Stage Element", countElement)
+                //console.log("Count Element Called from Stage Element", countElement)
                 if (countElement) {
                     console.log("Count Element Cleared")
                     countElement.textContent = '0';
@@ -969,7 +953,7 @@ async function loadSavedEmails() {
                 
                 // Clear existing emails from UI
                 const emailsContainer = stageElement.querySelector('.stage-emails-container');
-                console.log("Email Container Called within Stage Element Debug: ", emailsContainer)
+                //console.log("Email Container Called within Stage Element Debug: ", emailsContainer)
                 if (emailsContainer) {
                     console.log("Email Container Cleared")
                     emailsContainer.innerHTML = '';
@@ -1032,11 +1016,11 @@ function observeGmailInbox() {
         }
 
         // Only create sidebar once
-        if (!observerState.sidebarCreated) {
-            console.log('Found Gmail container, creating sidebar and observer');
-            createSidebar();
-            observerState.sidebarCreated = true;
-        }
+        // if (!observerState.sidebarCreated) {
+        //     console.log('Found Gmail container, creating sidebar and observer');
+        //     createSidebar();
+        //     observerState.sidebarCreated = true;
+        // }
 
         const observer = new MutationObserver((mutations) => {
             let shouldInitialize = false;
@@ -1069,6 +1053,223 @@ function observeGmailInbox() {
 
     findEmailContainer();
 }
+// Create a new PipelinePage component that will contain all the sidebar functionality
+// Create a function to handle the pipeline page functionality
+function createPipelinePage() {
+    // Function to create pipeline content
+    function createPipelineContent() {
+        const pipelineContent = document.createElement('div');
+        pipelineContent.style.cssText = `
+            width: 100%;
+            height: calc(100% - 60px); // Account for back button
+            display: flex;
+            flex-direction: column;
+            background: #f8fafc;
+        `;
+
+        // Create pipeline overview header
+        const pipelineOverview = document.createElement('div');
+        pipelineOverview.id = 'pipeline-overview';
+        pipelineOverview.style.cssText = `
+            display: flex;
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(90deg, 
+                #4B5563 0%, 
+                #60A5FA 20%, 
+                #C084FC 40%, 
+                #EF4444 60%, 
+                #34D399 80%, 
+                #FCD34D 100%
+            );
+            color: white;
+            font-size: 13px;
+        `;
+
+        // Content section
+        const contentSection = document.createElement('div');
+        contentSection.style.cssText = `
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            margin: 0 auto;
+            max-width: 1200px;
+            width: 100%;
+        `;
+
+        // Stages container
+        const stagesContainer = document.createElement('div');
+        stagesContainer.id = 'pipeline-stages';
+        stagesContainer.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        `;
+        contentSection.appendChild(stagesContainer);
+
+        // Footer with Add Stage button
+        const footerSection = document.createElement('div');
+        footerSection.style.cssText = `
+            padding: 16px;
+            border-top: 1px solid #e5e7eb;
+            background: white;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        `;
+
+        const addButton = document.createElement('button');
+        addButton.textContent = '+ Add Stage';
+        addButton.style.cssText = `
+            width: 100%;
+            padding: 8px;
+            background: #4299E1;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        `;
+        addButton.addEventListener('click', createAddStageForm);
+        footerSection.appendChild(addButton);
+
+        pipelineContent.appendChild(pipelineOverview);
+        pipelineContent.appendChild(contentSection);
+        pipelineContent.appendChild(footerSection);
+
+        return pipelineContent;
+    }
+
+    function showPipelinePage() {
+        const mainContent = document.querySelector('.bkK') as HTMLElement;
+        if (mainContent) {
+            mainContent.style.display = 'none';
+            
+            // Create pipeline page container
+            const pipelinePage = document.createElement('div');
+            pipelinePage.id = 'pipeline-page';
+            pipelinePage.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: white;
+                z-index: 1000;
+                overflow-y: auto;
+            `;
+
+            // Add back button
+            const backButton = document.createElement('button');
+            backButton.textContent = '← Back to Gmail';
+            backButton.style.cssText = `
+                margin: 16px;
+                padding: 8px 16px;
+                border: none;
+                background: #f1f3f4;
+                border-radius: 4px;
+                cursor: pointer;
+            `;
+            backButton.addEventListener('click', () => {
+                pipelinePage.remove();
+                mainContent.style.display = '';
+            });
+
+            pipelinePage.appendChild(backButton);
+            
+            // Add pipeline content
+            const pipelineContent = createPipelineContent();
+            pipelinePage.appendChild(pipelineContent);
+            
+            document.body.appendChild(pipelinePage);
+
+            // Load stages and emails
+            chrome.storage.sync.get(['pipelineStages'], (result) => {
+                const stages = result.pipelineStages || defaultStages;
+                updatePipelineHeader(stages);
+                const stagesContainer = document.getElementById('pipeline-stages');
+                if (stagesContainer) {
+                    stages.forEach((stage) => {
+                        stagesContainer.appendChild(createStageElement(stage));
+                    });
+                }
+            });
+
+            // Load saved emails
+            loadSavedEmails();
+        }
+    }
+
+    return { showPipelinePage };
+}
+
+// Modify the createPipelineButton function to use the new component
+// Create a function to handle the pipeline page functionality
+// Update the createPipelineButton function
+function createPipelineButton() {
+    // Skip if button already exists
+    if (document.querySelector('#pipeline-button')) return;
+
+    // Find Gmail's sidebar navigation list
+    const sidebarNav = document.querySelector('.ain');
+    if (!sidebarNav) return;
+
+    const { showPipelinePage } = createPipelinePage();
+
+    // Create button container to match Gmail's style
+    const buttonContainer = document.createElement('div');
+    buttonContainer.id = 'pipeline-button';
+    buttonContainer.style.cssText = `
+        padding: 0 8px;
+        height: 32px;
+        margin: 4px 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        border-radius: 16px;
+    `;
+
+    // Hover effect
+    buttonContainer.addEventListener('mouseenter', () => {
+        buttonContainer.style.backgroundColor = 'rgba(32, 33, 36, 0.059)';
+    });
+    buttonContainer.addEventListener('mouseleave', () => {
+        buttonContainer.style.backgroundColor = '';
+    });
+
+    // Button content
+    buttonContainer.innerHTML = `
+        <div style="margin-right: 12px;">📈</div>
+        <div style="font-size: 14px;">Pipeline</div>
+    `;
+
+    // Insert after Inbox
+    const inboxButton = document.querySelector('[data-tooltip="Inbox"]');
+    if (inboxButton) {
+        const parentElement = inboxButton.parentElement;
+        if (parentElement && parentElement.parentElement) {
+            parentElement.parentElement.insertBefore(buttonContainer, parentElement.nextSibling);
+        }
+    }
+
+    // Add click handler
+    buttonContainer.addEventListener('click', showPipelinePage);
+}
+// Setup MutationObserver to watch for changes
+function setupButtonObserver() {
+    const observer = new MutationObserver((mutations) => {
+        // Check if our button exists
+        if (!document.querySelector('#pipeline-button')) {
+            createPipelineButton();
+        }
+    });
+
+    // Start observing the body for changes
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+}
 const addGlobalStyles = () => {
     const style = document.createElement('style');
     style.textContent = `
@@ -1097,6 +1298,7 @@ const addGlobalStyles = () => {
 // Add this to your initialization
 window.addEventListener('load', () => {
     console.log('Page loaded, initializing CRM...');
+    createPipelineButton();
     addGlobalStyles();
         // Clean storage before initialization
         // cleanupStorage().then(() => {
@@ -1155,6 +1357,8 @@ window.addEventListener('load', () => {
     };
 
     initialSetup();
+    createPipelineButton();
+    setupButtonObserver();
 });
 const init = () => {
     if (!window.location.origin.includes(GMAIL_URL_PATTERN)) {
@@ -1162,6 +1366,8 @@ const init = () => {
     }
     console.log('Gmail detected, starting observer');
     observeGmailInbox();
+    createPipelineButton();
+    setupButtonObserver();
 };
 
 // Start when page loads
