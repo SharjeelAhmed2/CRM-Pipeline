@@ -59,10 +59,10 @@ console.log('Content script starting...');
 var GMAIL_URL_PATTERN = 'https://mail.google.com';
 // Default stages
 var defaultStages = [
-    { id: '1', name: 'Lead', color: '#718096' },
-    { id: '2', name: 'Pitched', color: '#4299E1' },
-    { id: '3', name: 'Waiting', color: '#9F7AEA' },
-    { id: '4', name: 'Closed', color: '#48BB78' }
+    { id: '1', name: 'Lead', color: '#4A5568' }, // Dark gray
+    { id: '2', name: 'Pitched', color: '#4299E1' }, // Blue
+    { id: '3', name: 'Waiting for Proposal', color: '#9F7AEA' }, // Purple
+    { id: '4', name: 'Warm Lead', color: '#F56565' } // Red
 ];
 // To maintain multiple reloads 
 var observerState = {
@@ -152,9 +152,10 @@ function createStageElement(stage) {
     stageDiv.style.cssText = "\n        margin-bottom: 10px;\n        background: white;\n        border-radius: 4px;\n        box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n    ";
     // Create the header with arrow indicator
     var headerDiv = document.createElement('div');
-    headerDiv.style.cssText = "\n        padding: 10px;\n        display: flex;\n        justify-content: space-between;\n        align-items: center;\n        border-left: 4px solid ".concat(stage.color, ";\n        border-radius: 4px;\n        background: white;\n        cursor: pointer;\n    ");
+    headerDiv.style.cssText = "\n        padding: 10px;\n        display: flex;\n        justify-content: space-between;\n        align-items: center;\n        border-radius: 4px;\n        background: white;\n        cursor: pointer;\n    ";
     // Modified header structure to include arrow
-    headerDiv.innerHTML = "\n        <div style=\"display: flex; align-items: center; gap: 8px; flex: 1;\">\n            <span style=\"\n                transform: rotate(-90deg);\n                transition: transform 0.2s;\n                font-size: 12px;\n                color: #666;\n            \">\u25BC</span>\n            <span>".concat(stage.name, "</span>\n            <span class=\"stage-count\">0</span>\n        </div>\n        <button class=\"delete-stage\" style=\"\n            background: none;\n            border: none;\n            color: #ff4444;\n            cursor: pointer;\n            font-size: 18px;\n            padding: 0 4px;\n        \">\u00D7</button>\n    ");
+    // Modified header content structure with new styling for stage name
+    headerDiv.innerHTML = "\n        <div style=\"display: flex; align-items: center; gap: 12px; flex: 1;\">\n            <span style=\"\n                transform: rotate(-90deg);\n                transition: transform 0.2s;\n                font-size: 12px;\n                color: #666;\n            \">\u25BC</span>\n            \n            <div style=\"\n                background: ".concat(stage.color, ";\n                padding: 4px 12px;\n                border-radius: 4px;\n                color: white;\n                font-size: 13px;\n                display: flex;\n                align-items: center;\n                gap: 8px;\n                min-width: 80px;\n            \">\n                <span>").concat(stage.name, "</span>\n                <span class=\"stage-count\" style=\"\n                    background: rgba(255, 255, 255, 0.2);\n                    padding: 2px 6px;\n                    border-radius: 3px;\n                    font-size: 12px;\n                \">0</span>\n            </div>\n        </div>\n        <button class=\"delete-stage\" style=\"\n            background: none;\n            border: none;\n            color: #666;\n            cursor: pointer;\n            font-size: 18px;\n            padding: 0 4px;\n            margin-left: 8px;\n        \">\u00D7</button>\n    ");
     // Create a container for emails that will appear below the header
     var emailsContainer = document.createElement('div');
     emailsContainer.className = 'stage-emails-container';

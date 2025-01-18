@@ -36,10 +36,10 @@ interface StoredEmailData {
 
 // Default stages
 const defaultStages: PipelineStage[] = [
-    { id: '1', name: 'Lead', color: '#718096' },
-    { id: '2', name: 'Pitched', color: '#4299E1' },
-    { id: '3', name: 'Waiting', color: '#9F7AEA' },
-    { id: '4', name: 'Closed', color: '#48BB78' }
+    { id: '1', name: 'Lead', color: '#4A5568' },             // Dark gray
+    { id: '2', name: 'Pitched', color: '#4299E1' },          // Blue
+    { id: '3', name: 'Waiting for Proposal', color: '#9F7AEA' }, // Purple
+    { id: '4', name: 'Warm Lead', color: '#F56565' }         // Red
 ];
 
 // To maintain multiple reloads 
@@ -129,31 +129,50 @@ function createStageElement(stage: PipelineStage) {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-left: 4px solid ${stage.color};
         border-radius: 4px;
         background: white;
         cursor: pointer;
     `;
 
     // Modified header structure to include arrow
+    // Modified header content structure with new styling for stage name
     headerDiv.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+        <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
             <span style="
                 transform: rotate(-90deg);
                 transition: transform 0.2s;
                 font-size: 12px;
                 color: #666;
             ">▼</span>
-            <span>${stage.name}</span>
-            <span class="stage-count">0</span>
+            
+            <div style="
+                background: ${stage.color};
+                padding: 4px 12px;
+                border-radius: 4px;
+                color: white;
+                font-size: 13px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-width: 80px;
+            ">
+                <span>${stage.name}</span>
+                <span class="stage-count" style="
+                    background: rgba(255, 255, 255, 0.2);
+                    padding: 2px 6px;
+                    border-radius: 3px;
+                    font-size: 12px;
+                ">0</span>
+            </div>
         </div>
         <button class="delete-stage" style="
             background: none;
             border: none;
-            color: #ff4444;
+            color: #666;
             cursor: pointer;
             font-size: 18px;
             padding: 0 4px;
+            margin-left: 8px;
         ">×</button>
     `;
 
