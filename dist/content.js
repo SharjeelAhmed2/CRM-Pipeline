@@ -198,7 +198,7 @@ function createAddStageForm() {
     var form = document.createElement('form');
     form.innerHTML = "\n        <h3 style=\"margin-bottom: 15px; font-weight: bold;\">Add New Stage</h3>\n        <div style=\"margin-bottom: 15px;\">\n            <input type=\"text\" id=\"stageName\" placeholder=\"Stage Name\" style=\"\n                width: 100%;\n                padding: 8px;\n                border: 1px solid #e2e8f0;\n                border-radius: 4px;\n                margin-bottom: 10px;\n            \">\n            <input type=\"color\" id=\"stageColor\" value=\"#718096\" style=\"\n                width: 100%;\n                height: 40px;\n                border: 1px solid #e2e8f0;\n                border-radius: 4px;\n            \">\n        </div>\n        <div style=\"display: flex; gap: 10px;\">\n            <button type=\"submit\" style=\"\n                flex: 1;\n                padding: 8px;\n                background: #4299E1;\n                color: white;\n                border: none;\n                border-radius: 4px;\n                cursor: pointer;\n            \">Add</button>\n            <button type=\"button\" id=\"cancelBtn\" style=\"\n                flex: 1;\n                padding: 8px;\n                background: #CBD5E0;\n                color: white;\n                border: none;\n                border-radius: 4px;\n                cursor: pointer;\n            \">Cancel</button>\n        </div>\n    ";
     modal.appendChild(form);
-    // Handle form submission 
+    // Handle form submission
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         var nameInput = document.getElementById('stageName');
@@ -214,12 +214,14 @@ function createAddStageForm() {
             var updatedStages = __spreadArray(__spreadArray([], currentStages, true), [newStage], false);
             // Save updated stages
             chrome.storage.sync.set({ pipelineStages: updatedStages }, function () {
+                // Update header with new stages
+                updatePipelineHeader(updatedStages);
                 // Add new stage to UI
                 var stagesContainer = document.getElementById('pipeline-stages');
                 if (stagesContainer) {
                     stagesContainer.appendChild(createStageElement(newStage));
                 }
-                // Remove modal that we created when we clicked on Add Stage button
+                // Remove modal
                 document.body.removeChild(modal);
                 document.body.removeChild(overlay);
             });
@@ -235,10 +237,33 @@ function createAddStageForm() {
     document.body.appendChild(overlay);
     document.body.appendChild(modal);
 }
+// Function to update header with stages
+function updatePipelineHeader(stages) {
+    var pipelineOverview = document.getElementById('pipeline-overview');
+    if (!pipelineOverview)
+        return;
+    pipelineOverview.innerHTML = '';
+    stages.forEach(function (stage) {
+        var segment = document.createElement('div');
+        segment.style.cssText = "\n            flex: 1;\n            display: flex;\n            flex-direction: column;\n            justify-content: center;\n            align-items: center;\n            text-align: center;\n            padding: 8px 4px;\n            position: relative;\n        ";
+        // Add count
+        var count = document.createElement('div');
+        count.textContent = '0';
+        count.className = "header-count-".concat(stage.id);
+        count.style.cssText = "\n            font-size: 18px;\n            font-weight: bold;\n            margin-bottom: 4px;\n        ";
+        // Add stage name
+        var name = document.createElement('div');
+        name.textContent = stage.name;
+        name.style.cssText = "\n            font-size: 11px;\n            line-height: 1.2;\n            white-space: nowrap;\n            overflow: hidden;\n            text-overflow: ellipsis;\n            max-width: 100%;\n        ";
+        segment.appendChild(count);
+        segment.appendChild(name);
+        pipelineOverview.appendChild(segment);
+    });
+}
 // For Sidebar
 function createSidebar() {
     return __awaiter(this, void 0, void 0, function () {
-        var sidebar, pipelineOverview, stages, stagesForStage, currentStages, _i, currentStages_1, stagessss, stageElement, countElement, currentCount, contentSection, stagesContainer, footerSection, addButton, gmailContent;
+        var sidebar, pipelineOverview, stages, contentSection, stagesContainer, footerSection, addButton, gmailContent;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -246,29 +271,9 @@ function createSidebar() {
                     sidebar.id = 'gmail-crm-sidebar';
                     sidebar.style.cssText = "\n        position: fixed;\n        right: 0;\n        top: 0;\n        width: 450px;\n        height: 100%;\n        background: #f8fafc;\n        box-shadow: -2px 0 5px rgba(0,0,0,0.1);\n        z-index: 1000;\n        display: flex;\n        flex-direction: column;\n        overflow: hidden;\n    ";
                     pipelineOverview = document.createElement('div');
+                    pipelineOverview.id = 'pipeline-overview'; // Add this line
                     pipelineOverview.style.cssText = "\n        display: flex;\n        width: 100%;\n        height: 60px;\n        background: linear-gradient(90deg, \n            #4B5563 0%, \n            #60A5FA 20%, \n            #C084FC 40%, \n            #EF4444 60%, \n            #34D399 80%, \n            #FCD34D 100%\n        );\n        color: white;\n        font-size: 13px;\n    ";
                     stages = [defaultStages];
-                    return [4 /*yield*/, chrome.storage.sync.get(['pipelineStages'])];
-                case 1:
-                    stagesForStage = _a.sent();
-                    currentStages = stagesForStage.pipelineStages || defaultStages;
-                    console.log("stagesForStage:", stagesForStage);
-                    console.log("currentStages", currentStages);
-                    for (_i = 0, currentStages_1 = currentStages; _i < currentStages_1.length; _i++) {
-                        stagessss = currentStages_1[_i];
-                        console.log(stagessss);
-                        stageElement = document.querySelector("[data-stage-id=\"".concat(stagessss.id, "\"]"));
-                        console.log("Stage Element inside Sidebar", stageElement);
-                        //const stageDiv: HTMLElement = document.createElement('div');
-                        if (stageElement) {
-                            countElement = stageElement.querySelector('.stage-count');
-                            if (countElement) {
-                                currentCount = parseInt(countElement.textContent || '0');
-                                countElement.textContent = (currentCount + 1).toString();
-                                console.log("Called Stage Counts from Sidebar", countElement);
-                            }
-                        }
-                    }
                     stages[0].forEach(function (stage) {
                         var segment = document.createElement('div');
                         segment.style.cssText = "\n            flex: 1;\n            display: flex;\n            flex-direction: column;\n            justify-content: center;\n            align-items: center;\n            text-align: center;\n            padding: 8px 4px;\n            position: relative;\n        ";
@@ -311,12 +316,13 @@ function createSidebar() {
                     // Load stages
                     chrome.storage.sync.get(['pipelineStages'], function (result) {
                         var stages = result.pipelineStages || defaultStages;
+                        updatePipelineHeader(stages);
                         stages.forEach(function (stage) {
                             stagesContainer.appendChild(createStageElement(stage));
                         });
                     });
                     return [4 /*yield*/, loadSavedEmails()];
-                case 2:
+                case 1:
                     _a.sent();
                     return [2 /*return*/];
             }
@@ -620,7 +626,7 @@ function showStageSelectionPopup(emailData, x, y) {
 // Update the loadSavedEmails function to use StorageUtils
 function loadSavedEmails() {
     return __awaiter(this, void 0, void 0, function () {
-        var stages, currentStages, _loop_1, _i, currentStages_2, stage, error_4;
+        var stages, currentStages, _loop_1, _i, currentStages_1, stage, error_4;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -668,11 +674,11 @@ function loadSavedEmails() {
                             }
                         });
                     };
-                    _i = 0, currentStages_2 = currentStages;
+                    _i = 0, currentStages_1 = currentStages;
                     _a.label = 2;
                 case 2:
-                    if (!(_i < currentStages_2.length)) return [3 /*break*/, 5];
-                    stage = currentStages_2[_i];
+                    if (!(_i < currentStages_1.length)) return [3 /*break*/, 5];
+                    stage = currentStages_1[_i];
                     return [5 /*yield**/, _loop_1(stage)];
                 case 3:
                     _a.sent();

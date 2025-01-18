@@ -273,7 +273,7 @@ function createStageElement(stage: PipelineStage) {
 
     modal.appendChild(form);
 
-    // Handle form submission 
+    // Handle form submission
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         const nameInput = document.getElementById('stageName') as HTMLInputElement;
@@ -292,13 +292,16 @@ function createStageElement(stage: PipelineStage) {
             
             // Save updated stages
             chrome.storage.sync.set({ pipelineStages: updatedStages }, () => {
+                // Update header with new stages
+                updatePipelineHeader(updatedStages);
+                
                 // Add new stage to UI
                 const stagesContainer = document.getElementById('pipeline-stages');
                 if (stagesContainer) {
                     stagesContainer.appendChild(createStageElement(newStage));
                 }
                 
-                // Remove modal that we created when we clicked on Add Stage button
+                // Remove modal
                 document.body.removeChild(modal);
                 document.body.removeChild(overlay);
             });
@@ -317,6 +320,53 @@ function createStageElement(stage: PipelineStage) {
     document.body.appendChild(modal);
 }
 
+
+// Function to update header with stages
+function updatePipelineHeader(stages: PipelineStage[]) {
+    const pipelineOverview = document.getElementById('pipeline-overview');
+    if (!pipelineOverview) return;
+    
+    pipelineOverview.innerHTML = '';
+    stages.forEach(stage => {
+        const segment = document.createElement('div');
+        segment.style.cssText = `
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 8px 4px;
+            position: relative;
+        `;
+      
+        // Add count
+        const count = document.createElement('div');
+        count.textContent = '0';
+        count.className = `header-count-${stage.id}`;
+        count.style.cssText = `
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        `;
+
+        // Add stage name
+        const name = document.createElement('div');
+        name.textContent = stage.name;
+        name.style.cssText = `
+            font-size: 11px;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        `;
+
+        segment.appendChild(count);
+        segment.appendChild(name);
+        pipelineOverview.appendChild(segment);
+    });
+}
 
 // For Sidebar
 async function createSidebar() {
@@ -338,6 +388,7 @@ async function createSidebar() {
 
     // Create pipeline overview header
     const pipelineOverview = document.createElement('div');
+    pipelineOverview.id = 'pipeline-overview';  // Add this line
     pipelineOverview.style.cssText = `
         display: flex;
         width: 100%;
@@ -355,26 +406,27 @@ async function createSidebar() {
     `;
 
     // Create stage segments
-    const stages = [defaultStages];
-    const stagesForStage = await chrome.storage.sync.get(['pipelineStages']);
-    const currentStages = stagesForStage.pipelineStages || defaultStages;
-    console.log("stagesForStage:", stagesForStage);
-    console.log("currentStages", currentStages);
-    for (const stagessss of currentStages) {
-    console.log(stagessss)    
-    const stageElement = document.querySelector(`[data-stage-id="${stagessss.id}"]`);
-    console.log("Stage Element inside Sidebar", stageElement)
-    //const stageDiv: HTMLElement = document.createElement('div');
-    if(stageElement){
-    const countElement = stageElement.querySelector('.stage-count') ;
-    if (countElement) {
-        const currentCount = parseInt(countElement.textContent || '0');
+  
+//     const stagesForStage = await chrome.storage.sync.get(['pipelineStages']);
+//     const currentStages = stagesForStage.pipelineStages || defaultStages;
+//     console.log("stagesForStage:", stagesForStage);
+//     console.log("currentStages", currentStages);
+//     for (const stagessss of currentStages) {
+//     console.log(stagessss)    
+//     const stageElement = document.querySelector(`[data-stage-id="${stagessss.id}"]`);
+//     console.log("Stage Element inside Sidebar", stageElement)
+//     //const stageDiv: HTMLElement = document.createElement('div');
+//     if(stageElement){
+//     const countElement = stageElement.querySelector('.stage-count') ;
+//     if (countElement) {
+//         const currentCount = parseInt(countElement.textContent || '0');
         
-        countElement.textContent = (currentCount + 1).toString();
-        console.log("Called Stage Counts from Sidebar", countElement);
-    }
-}
-}
+//         countElement.textContent = (currentCount + 1).toString();
+//         console.log("Called Stage Counts from Sidebar", countElement);
+//     }
+// }
+// }
+    const stages = [defaultStages];
     stages[0].forEach(stage => {
         const segment = document.createElement('div');
         segment.style.cssText = `
@@ -473,6 +525,7 @@ async function createSidebar() {
     // Load stages
     chrome.storage.sync.get(['pipelineStages'], (result) => {
         const stages = result.pipelineStages || defaultStages;
+        updatePipelineHeader(stages);
         stages.forEach((stage: PipelineStage) => {
             stagesContainer.appendChild(createStageElement(stage));
         });
