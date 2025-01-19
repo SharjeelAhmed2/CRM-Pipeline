@@ -110,8 +110,10 @@
       const name = document.createElement('div');
       name.textContent = stage.name;
       name.style.cssText = `
-            font-size: 11px;
+            font-size: 20px;
             line-height: 1.2;
+            font-weight: 200;
+            padding: 10px
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -667,7 +669,7 @@ async function deleteOne(emailId: string, stageId: string, stageDiv: HTMLElement
     pipelineOverview.style.cssText = `
             display: flex;
             width: 100%;
-            height: 60px;
+            height: fit-content;
             background: linear-gradient(90deg, 
                 #4B5563 0%, 
                 #60A5FA 20%, 
@@ -847,7 +849,7 @@ async function deleteOne(emailId: string, stageId: string, stageDiv: HTMLElement
       console.error('Error loading saved emails:', error);
     }
   }
-  
+
   addGlobalStyles();
   showPipelinePage();
 })();
