@@ -5,7 +5,8 @@
   "description": "Seamlessly handle your Gmail Leads.",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "tabs"
   ],
   "host_permissions": [
     "https://mail.google.com/*"
@@ -13,6 +14,12 @@
   "icons": {
     "128": "icon128.png"
   },
+  "action": {
+    "default_icon": {
+      "128": "icon128.png"
+    }
+  },
+  "options_page": "options.html",
   "content_scripts": [
     {
       "matches": [
