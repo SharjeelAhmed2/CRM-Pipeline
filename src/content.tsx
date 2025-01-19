@@ -86,6 +86,19 @@ const StorageUtils = {
             console.error('Error loading emails:', error);
             return [];
         }
+    },
+    async removeEmailFromStage(emailId: string, stageId: string): Promise<boolean> {
+        try {
+            const key = `stage_${stageId}`;
+            const result = await chrome.storage.local.get([key]);
+            let emails = result[key] || [];
+            emails = emails.filter(email => email.id !== emailId);
+            await chrome.storage.local.set({ [key]: emails });
+            return true;
+        } catch (error) {
+            console.error('Error removing email:', error);
+            return false;
+        }
     }
 };
 
@@ -109,6 +122,84 @@ function decompressEmailData(stored: StoredEmailData): EmailData {
     };
 }
 
+// 4. Implement drop zone handlers
+function handleDragOver(e: DragEvent) {
+    e.preventDefault();
+    if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'move';
+    }
+}
+
+function handleDragEnter(e: DragEvent) {
+    e.preventDefault();
+    if (e.target instanceof HTMLElement) {
+        e.target.classList.add('drag-over');
+    }
+}
+
+function handleDragLeave(e: DragEvent) {
+    if (e.target instanceof HTMLElement) {
+        e.target.classList.remove('drag-over');
+    }
+}
+
+async function handleDrop(e: DragEvent) {
+    e.preventDefault();
+    if (!e.target || !(e.target instanceof HTMLElement)) return;
+    
+    // Remove drag-over styling
+    e.target.classList.remove('drag-over');
+    
+    if (!e.dataTransfer) return;
+    
+    try {
+        // Get the dragged email data
+        const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
+        const { emailId, sourceStageId } = dragData;
+        
+        // Find the target stage
+        const targetStageElement = (e.target as HTMLElement).closest('.pipeline-stage');
+        if (!targetStageElement) return;
+        
+        const targetStageId = targetStageElement.getAttribute('data-stage-id');
+        if (!targetStageId || targetStageId === sourceStageId) return;
+
+        // Get email data from source stage
+        const sourceEmails = await StorageUtils.loadStageEmails(sourceStageId);
+        const emailToMove = sourceEmails.find(email => email.id === emailId);
+        
+        if (!emailToMove) return;
+        // Remove email from source stage storage
+        await chrome.storage.local.set({ [`stage_${sourceStageId}`]: sourceEmails.filter(email => email.id !== emailId) });
+
+        const filteredEmails = sourceEmails.filter(email => email.id !== emailId);
+        // Remove from source stage
+        for (const email of filteredEmails) {
+            await StorageUtils.saveEmailToStage(email, sourceStageId);
+        }
+        // Add to target stage
+        const targetEmails = await StorageUtils.loadStageEmails(targetStageId);
+        await chrome.storage.local.set({ [`stage_${targetStageId}`]: [...targetEmails, emailToMove] });
+
+        //const existingEmails = await StorageUtils.loadStageEmails(targetStageId);
+        const updatedEmails = [...targetEmails, emailToMove];
+
+        for (const email of updatedEmails) {
+            await StorageUtils.saveEmailToStage(email, targetStageId);
+        }
+        // Add to target stage
+        // await StorageUtils.saveEmailToStage(targetStageId, [
+        //     ...(await StorageUtils.loadStageEmails(targetStageId)),
+        //     emailToMove
+        // ]);
+
+        // Refresh the UI
+        await loadSavedEmails();
+        // Add this line
+    } catch (error) {
+        console.error('Error during drop:', error);
+    }
+}
 
 
 // Update the createStageElement function to match your UI
@@ -189,7 +280,11 @@ function createStageElement(stage: PipelineStage) {
         gap: 8px;
         display: none; /* Initially hidden */
     `;
-
+ // Add drop zone handlers
+    emailsContainer.addEventListener('dragover', handleDragOver);
+    emailsContainer.addEventListener('dragenter', handleDragEnter);
+    emailsContainer.addEventListener('dragleave', handleDragLeave);
+    emailsContainer.addEventListener('drop', handleDrop);
     stageDiv.appendChild(headerDiv);
     stageDiv.appendChild(emailsContainer);
 
@@ -315,14 +410,16 @@ function createStageElement(stage: PipelineStage) {
             chrome.storage.sync.set({ pipelineStages: updatedStages }, () => {
                 // Update header with new stages
                 updatePipelineHeader(updatedStages);
-                
+               
                 // Add new stage to UI
                 const stagesContainer = document.getElementById('pipeline-stages');
                 if (stagesContainer) {
                     stagesContainer.appendChild(createStageElement(newStage));
                 }
-                
-                // Remove modal
+               
+            // Then trigger the refresh as a separate operation
+
+                // Still remove modal even if refresh fails
                 document.body.removeChild(modal);
                 document.body.removeChild(overlay);
             });
@@ -390,151 +487,31 @@ function updatePipelineHeader(stages: PipelineStage[]) {
 }
 
 // For Sidebar
-async function createSidebar(){
-    const sidebar = document.createElement('div');
-    sidebar.id = 'gmail-crm-sidebar';
-    sidebar.style.cssText = `
-        position: fixed;
-        right: 0;
-        top: 0;
-        width: 450px;
-        height: 100%;
-        background: #f8fafc;
-        box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-        z-index: 1000;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    `;
 
-    // Create pipeline overview header
-    const pipelineOverview = document.createElement('div');
-    pipelineOverview.id = 'pipeline-overview';  // Add this line
-    pipelineOverview.style.cssText = `
-        display: flex;
-        width: 100%;
-        height: 60px;
-        background: linear-gradient(90deg, 
-            #4B5563 0%, 
-            #60A5FA 20%, 
-            #C084FC 40%, 
-            #EF4444 60%, 
-            #34D399 80%, 
-            #FCD34D 100%
-        );
-        color: white;
-        font-size: 13px;
-    `;
 
-    // Create stage segments
-  
-
-    const stages = [defaultStages];
-    stages[0].forEach(stage => {
-        const segment = document.createElement('div');
-        segment.style.cssText = `
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            padding: 8px 4px;
-            position: relative;
-        `;
-      
-        // Add count
-    const count = document.createElement('div');
-    count.textContent = '0';
-    count.className = `header-count-${stage.id}`; // Add this line
-    count.style.cssText = `
-        font-size: 18px;
-        font-weight: bold;
-        margin-bottom: 4px;
-    `;
-
-        // Add stage name
-        const name = document.createElement('div');
-        name.textContent = stage.name;
-        name.style.cssText = `
-            font-size: 11px;
-            line-height: 1.2;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 100%;
-        `;
-
-        segment.appendChild(count);
-        segment.appendChild(name);
-        pipelineOverview.appendChild(segment);
-    });
-
-    // Content section
-    const contentSection = document.createElement('div');
-    contentSection.style.cssText = `
-        flex: 1;
-        overflow-y: auto;
-        padding: 16px;
-    `;
-
-    // Stages container
-    const stagesContainer = document.createElement('div');
-    stagesContainer.id = 'pipeline-stages';
-    stagesContainer.style.cssText = `
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-    `;
-    contentSection.appendChild(stagesContainer);
-
-   // Footer with Add Stage button
-    const footerSection = document.createElement('div');
-    footerSection.style.cssText = `
-        padding: 16px;
-        border-top: 1px solid #e5e7eb;
-        background: white;
-    `;
-
-    const addButton = document.createElement('button');
-    addButton.textContent = '+ Add Stage';
-    addButton.style.cssText = `
-        width: 100%;
-        padding: 8px;
-        background: #4299E1;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    `;
-    addButton.addEventListener('click', createAddStageForm);
-    footerSection.appendChild(addButton);
-
-    // Assemble sidebar
-    sidebar.appendChild(pipelineOverview);
-    sidebar.appendChild(contentSection);
-    sidebar.appendChild(footerSection);
-
-    // Add to page
-    document.body.appendChild(sidebar);
+function handleDragStart(e: DragEvent) {
+    if (!e.target || !(e.target instanceof HTMLElement)) return;
     
-    // Adjust Gmail's main content
-    const gmailContent = document.querySelector<HTMLElement>('.bkK');
-    if (gmailContent) {
-        gmailContent.style.marginRight = '450px';
+    // Add dragging class for visual feedback
+    e.target.classList.add('dragging');
+    
+    // Set the drag data
+    const emailId = e.target.getAttribute('data-email-id');
+    const sourceStageId = e.target.getAttribute('data-stage-id');
+    
+    if (emailId && sourceStageId && e.dataTransfer) {
+        e.dataTransfer.setData('application/json', JSON.stringify({
+            emailId,
+            sourceStageId
+        }));
+        // Set drag effect
+        e.dataTransfer.effectAllowed = 'move';
     }
+}
 
-    // Load stages
-    chrome.storage.sync.get(['pipelineStages'], (result) => {
-        const stages = result.pipelineStages || defaultStages;
-        updatePipelineHeader(stages);
-        stages.forEach((stage: PipelineStage) => {
-            stagesContainer.appendChild(createStageElement(stage));
-        });
-    });
-
-    await loadSavedEmails();
+function handleDragEnd(e: DragEvent) {
+    if (!e.target || !(e.target instanceof HTMLElement)) return;
+    e.target.classList.remove('dragging');
 }
 // Add this new function to handle adding emails to stages
 // Update addEmailToStage function to match your UI
@@ -579,6 +556,9 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
         const emailDiv = document.createElement('div');
         emailDiv.className = 'pipeline-email';
         emailDiv.setAttribute('data-email-id', emailData.id);
+         // Add these attributes for drag and drop
+        emailDiv.setAttribute('draggable', 'true');
+        emailDiv.setAttribute('data-stage-id', stage.id);
         emailDiv.style.cssText = `
             padding: 8px 16px;
             cursor: pointer;
@@ -632,6 +612,9 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
             });
         });
 
+          // Add drag handlers
+        emailDiv.addEventListener('dragstart', handleDragStart);
+        emailDiv.addEventListener('dragend', handleDragEnd);
         // Add hover effect
         emailDiv.addEventListener('mouseenter', () => {
             emailDiv.style.backgroundColor = '#F3F4F6';
@@ -907,6 +890,7 @@ function showStageSelectionPopup(emailData: EmailData, x: number, y: number) {
                 if (stageElement) {
                     await StorageUtils.saveEmailToStage(emailData, stage.id);
                     addEmailToStage(emailData, stage, stageElement as HTMLElement);
+                   
                 }
                 popup.remove();
                 document.removeEventListener('click', closePopup);
@@ -1015,7 +999,7 @@ function observeGmailInbox() {
             return;
         }
 
-        // Only create sidebar once
+       // Only create sidebar once
         // if (!observerState.sidebarCreated) {
         //     console.log('Found Gmail container, creating sidebar and observer');
         //     createSidebar();
@@ -1295,10 +1279,29 @@ const addGlobalStyles = () => {
     `;
     document.head.appendChild(style);
 };
+const dragDropStyles = `
+    .pipeline-email {
+        cursor: move;
+        transition: all 0.2s ease;
+    }
+
+    .pipeline-email.dragging {
+        opacity: 0.5;
+        transform: scale(0.95);
+    }
+
+    .stage-emails-container.drag-over {
+        background-color: rgba(66, 153, 225, 0.1);
+        border: 2px dashed #4299E1;
+    }
+`;
+const styleSheet = document.createElement('style');
+styleSheet.textContent = dragDropStyles;
+document.head.appendChild(styleSheet);
 // Add this to your initialization
 window.addEventListener('load', () => {
     console.log('Page loaded, initializing CRM...');
-    createPipelineButton();
+   // createPipelineButton();
     addGlobalStyles();
         // Clean storage before initialization
         // cleanupStorage().then(() => {
@@ -1357,8 +1360,8 @@ window.addEventListener('load', () => {
     };
 
     initialSetup();
-    createPipelineButton();
-    setupButtonObserver();
+   createPipelineButton();
+   setupButtonObserver();
 });
 const init = () => {
     if (!window.location.origin.includes(GMAIL_URL_PATTERN)) {
