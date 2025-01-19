@@ -26,6 +26,7 @@ interface EmailData {
     id: string;
     subject: string;
     sender: string;
+    senderName: string;
     timestamp: string;
 }
 
@@ -34,6 +35,7 @@ interface StoredEmailData {
     s: string;        // subject
     f: string;        // from/sender
     t: string;        // timestamp
+    n: string;
 }
 
 // Default stages
@@ -76,6 +78,29 @@ const StorageUtils = {
         }
     },
 
+    async deleteEmailFromStage(email: string, stageId: string): Promise<boolean> {
+        try {
+            const key = `stage_${stageId}`;
+            const result = await chrome.storage.local.get([key]);
+            let emails: EmailData[] = result[key] || [];
+    
+            const updatedEmails = emails.filter(e => e.sender !== email);
+    
+            if (updatedEmails.length === emails.length) {
+                console.log(`No email with sender ${email} found in stage ${stageId}.`);
+                return false; 
+            }
+    
+            await chrome.storage.local.set({ [key]: updatedEmails });
+            console.log(`Email with sender ${email} deleted from stage ${stageId}.`);
+            return true;
+        } catch (error) {
+            console.error('Error deleting email:', error);
+            return false;
+        }
+    },
+    
+
     // Load emails for a stage function
     async loadStageEmails(stageId: string): Promise<EmailData[]> {
         try {
@@ -108,7 +133,8 @@ function compressEmailData(email: EmailData): StoredEmailData {
         i: email.id,
         s: email.subject.substring(0, 100),  // Limit subject length
         f: email.sender.substring(0, 50),    // Limit sender length
-        t: email.timestamp
+        t: email.timestamp,
+        n: email.senderName
     };
 }
 
@@ -118,7 +144,8 @@ function decompressEmailData(stored: StoredEmailData): EmailData {
         id: stored.i,
         subject: stored.s,
         sender: stored.f,
-        timestamp: stored.t
+        timestamp: stored.t,
+        senderName: stored.n
     };
 }
 
@@ -580,20 +607,19 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
             <div style="flex: 0 0 30px;">
                 <input type="checkbox" style="margin: 0;">
             </div>
-            <div style="flex: 1 1 100px; overflow: hidden; padding-right: 5px;" class="sender-cell">
-                ${typeof sender === 'string' ? sender : sender.short}
-                ${typeof sender === 'object' ?
-                `<button class="see-more-btn" style="color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;">see more</button>`
-                : ''}
+            <div style="flex: 1 1 100px; overflow: hidden; padding-right: 5px; font-weight: bolder;" class="sender-cell">
+                ${emailData.sender}
             </div>
-            <div style="flex: 1; overflow: hidden;" class="subject-cell">
-                ${typeof subjectText === 'string' ? subjectText : subjectText.short}
-                ${typeof subjectText === 'object' ?
-                `<button class="see-more-btn" style="color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;">see more</button>`
-                : ''}
+             <div style="flex: 1 1 100px; overflow: hidden; padding-right: 5px;" class="sender-cell">
+                ${emailData.senderName}
             </div>
             <div style="flex: 0 0 100px; text-align: right; color: #6B7280;">
                 ${timestamp}
+            </div>
+            <div style="flex: 0 0 120px; text-align: center; padding-left: 10px;" class="delete-lead-cell">
+            <button class="delete-lead-btn" style="color: white; background-color: #E53E3E; font-size: 12px; border: none; border-radius: 4px; cursor: pointer; padding: 4px 8px;">
+                Delete Lead
+            </button>
             </div>
         `;
 
@@ -604,13 +630,24 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
                 const cell = (btn as HTMLElement).parentElement;
                 if (cell) {
                     if (cell.classList.contains('sender-cell')) {
-                        cell.textContent = typeof sender === 'object' ? sender.full : sender;
+                        cell.textContent = sender || (sender as any).full;
                     } else if (cell.classList.contains('subject-cell')) {
                         cell.textContent = typeof subjectText === 'object' ? subjectText.full : subjectText;
                     }
                 }
             });
         });
+
+        const deleteButton = emailDiv.querySelector('.delete-lead-btn');
+        if (deleteButton) {
+            deleteButton.addEventListener('click', () => {
+                // Show an alert
+                const confirmed = confirm(`Are you sure you want to delete the lead for: ${emailData.sender}?`);
+                if (confirmed) {
+                    deleteOne(emailData.id, stage.id, stageDiv)
+                }
+            });
+        }
 
         // Add drag handlers
         emailDiv.addEventListener('dragstart', handleDragStart);
@@ -644,6 +681,57 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
         console.error('Error in addEmailToStage:', error);
     }
 }
+
+async function deleteOne(emailId: string, stageId: string, stageDiv: HTMLElement): Promise<boolean> {
+    try {
+        // Delete from storage
+        const key = `stage_${stageId}`;
+        const result = await chrome.storage.local.get([key]);
+        let emails: EmailData[] = result[key] || [];
+
+        // Filter out the email with the given ID
+        const updatedEmails = emails.filter(email => email.id !== emailId);
+
+        // Check if any email was removed
+        if (updatedEmails.length === emails.length) {
+            console.log(`No email with ID ${emailId} found in stage ${stageId}.`);
+            return false; // Email not found
+        }
+
+        // Save the updated email list back to storage
+        await chrome.storage.local.set({ [key]: updatedEmails });
+        console.log(`Email with ID ${emailId} deleted from stage ${stageId}.`);
+
+        // Delete from the UI (HTML)
+        const emailDiv = stageDiv.querySelector(`[data-email-id="${emailId}"]`);
+        if (emailDiv) {
+            emailDiv.remove();
+            console.log(`Email with ID ${emailId} removed from UI.`);
+        }
+
+        // Update the email count in the UI
+        const countElement = stageDiv.querySelector('.stage-count');
+        if (countElement) {
+            const currentCount = parseInt(countElement.textContent || '0');
+            countElement.textContent = (currentCount - 1).toString();
+            console.log(`Updated email count for stage ${stageId}.`);
+        }
+
+        // Update header count as well
+        const headerCount = document.querySelector(`.header-count-${stageId}`);
+        if (headerCount) {
+            const currentHeaderCount = parseInt(headerCount.textContent || '0');
+            headerCount.textContent = (currentHeaderCount - 1).toString();
+            console.log("Updated header count for stage", stageId, "to", currentHeaderCount - 1);
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error deleting email:', error);
+        return false;
+    }
+}
+
 
 
 // 5:11 AM on Friday the 10th 
@@ -735,6 +823,8 @@ function makeEmailDraggable(emailRow: HTMLElement) {
             // Get all table cells in the row
             const cells = emailRow.querySelectorAll('td');
 
+            console.log([...cells].map(item => item.innerText))
+
             // Find subject from the third cell typically
             const subjectCell = Array.from(cells).find(cell =>
                 cell.querySelector('[role="link"]') ||
@@ -746,6 +836,7 @@ function makeEmailDraggable(emailRow: HTMLElement) {
             // Find sender from the relevant cell
             // First try to find the email directly
             let sender = emailRow.querySelector('[email]')?.getAttribute('email');
+            let senderName = emailRow.querySelector('[email]')?.getAttribute('name') || "";
             if (!sender) {
                 // If no email attribute, try to get the sender name/email from text content
                 const senderCell = Array.from(cells).find(cell =>
@@ -764,6 +855,7 @@ function makeEmailDraggable(emailRow: HTMLElement) {
                 cells: cells.length,
                 subject,
                 sender,
+                senderName,
                 timestamp,
                 rowHTML: emailRow.innerHTML
             });
@@ -793,6 +885,7 @@ function makeEmailDraggable(emailRow: HTMLElement) {
                 id: `${subject}-${sender}`.replace(/[^a-zA-Z0-9]/g, ''),
                 subject: subject,
                 sender: sender,
+                senderName: senderName,
                 timestamp: timestamp
             };
 
@@ -1243,6 +1336,7 @@ function createPipelineButton() {
 
     // Add click handler
     buttonContainer.addEventListener('click', showPipelinePage);
+    showPipelinePage();
 }
 // Setup MutationObserver to watch for changes
 function setupButtonObserver() {
