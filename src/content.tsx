@@ -1309,6 +1309,7 @@ function createPipelineButton() {
         display: flex;
         align-items: center;
         border-radius: 16px;
+        padding: 0px 12px 0px 26px;
     `;
 
     // Hover effect
@@ -1322,7 +1323,7 @@ function createPipelineButton() {
     // Button content
     buttonContainer.innerHTML = `
         <div style="margin-right: 12px;">📈</div>
-        <div style="font-size: 14px;">Pipeline</div>
+        <div style="font-size: 14px; font-weight: bolder">Boxy</div>
     `;
 
     // Insert after Inbox
