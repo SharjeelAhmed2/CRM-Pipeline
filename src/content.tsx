@@ -605,25 +605,7 @@ const addGlobalStyles = () => {
     `;
   document.head.appendChild(style);
 };
-const dragDropStyles = `
-    .pipeline-email {
-        cursor: move;
-        transition: all 0.2s ease;
-    }
 
-    .pipeline-email.dragging {
-        opacity: 0.5;
-        transform: scale(0.95);
-    }
-
-    .stage-emails-container.drag-over {
-        background-color: rgba(66, 153, 225, 0.1);
-        border: 2px dashed #4299E1;
-    }
-`;
-const styleSheet = document.createElement('style');
-styleSheet.textContent = dragDropStyles;
-document.head.appendChild(styleSheet);
 // Add this to your initialization
 window.addEventListener('load', () => {
   console.log('Page loaded, initializing CRM...');
