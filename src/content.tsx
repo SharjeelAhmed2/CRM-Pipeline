@@ -54,7 +54,7 @@ const observerState: ObserverState = {
 // Storage utility functions
 // Create the StorageUtils object with all storage-related functions
 const StorageUtils = {
- 
+
 
     // Save email to stage function
     async saveEmailToStage(emailData: EmailData, stageId: string): Promise<boolean> {
@@ -63,11 +63,11 @@ const StorageUtils = {
             const result = await chrome.storage.local.get([key]);
             let emails = result[key] || [];
             emails.push(emailData);
-            
+
             if (emails.length > 50) {
                 emails = emails.slice(-50);
             }
-            
+
             await chrome.storage.local.set({ [key]: emails });
             return true;
         } catch (error) {
@@ -146,28 +146,28 @@ function handleDragLeave(e: DragEvent) {
 async function handleDrop(e: DragEvent) {
     e.preventDefault();
     if (!e.target || !(e.target instanceof HTMLElement)) return;
-    
+
     // Remove drag-over styling
     e.target.classList.remove('drag-over');
-    
+
     if (!e.dataTransfer) return;
-    
+
     try {
         // Get the dragged email data
         const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
         const { emailId, sourceStageId } = dragData;
-        
+
         // Find the target stage
         const targetStageElement = (e.target as HTMLElement).closest('.pipeline-stage');
         if (!targetStageElement) return;
-        
+
         const targetStageId = targetStageElement.getAttribute('data-stage-id');
         if (!targetStageId || targetStageId === sourceStageId) return;
 
         // Get email data from source stage
         const sourceEmails = await StorageUtils.loadStageEmails(sourceStageId);
         const emailToMove = sourceEmails.find(email => email.id === emailId);
-        
+
         if (!emailToMove) return;
         // Remove email from source stage storage
         await chrome.storage.local.set({ [`stage_${sourceStageId}`]: sourceEmails.filter(email => email.id !== emailId) });
@@ -280,7 +280,7 @@ function createStageElement(stage: PipelineStage) {
         gap: 8px;
         display: none; /* Initially hidden */
     `;
- // Add drop zone handlers
+    // Add drop zone handlers
     emailsContainer.addEventListener('dragover', handleDragOver);
     emailsContainer.addEventListener('dragenter', handleDragEnter);
     emailsContainer.addEventListener('dragleave', handleDragLeave);
@@ -320,8 +320,8 @@ function createStageElement(stage: PipelineStage) {
 }
 
 
- /// For Add Stage Button Functionality 
- function createAddStageForm() {
+/// For Add Stage Button Functionality 
+function createAddStageForm() {
     const modal = document.createElement('div');
     modal.style.cssText = `
         position: fixed;
@@ -394,7 +394,7 @@ function createStageElement(stage: PipelineStage) {
         e.preventDefault();
         const nameInput = document.getElementById('stageName') as HTMLInputElement;
         const colorInput = document.getElementById('stageColor') as HTMLInputElement;
-        
+
         const newStage: PipelineStage = {
             id: Date.now().toString(),
             name: nameInput.value,
@@ -405,19 +405,19 @@ function createStageElement(stage: PipelineStage) {
         chrome.storage.sync.get(['pipelineStages'], (result) => {
             const currentStages: PipelineStage[] = result.pipelineStages || defaultStages;
             const updatedStages = [...currentStages, newStage];
-            
+
             // Save updated stages
             chrome.storage.sync.set({ pipelineStages: updatedStages }, () => {
                 // Update header with new stages
                 updatePipelineHeader(updatedStages);
-               
+
                 // Add new stage to UI
                 const stagesContainer = document.getElementById('pipeline-stages');
                 if (stagesContainer) {
                     stagesContainer.appendChild(createStageElement(newStage));
                 }
-               
-            // Then trigger the refresh as a separate operation
+
+                // Then trigger the refresh as a separate operation
 
                 // Still remove modal even if refresh fails
                 document.body.removeChild(modal);
@@ -443,7 +443,7 @@ function createStageElement(stage: PipelineStage) {
 function updatePipelineHeader(stages: PipelineStage[]) {
     const pipelineOverview = document.getElementById('pipeline-overview');
     if (!pipelineOverview) return;
-    
+
     pipelineOverview.innerHTML = '';
     stages.forEach(stage => {
         const segment = document.createElement('div');
@@ -457,7 +457,7 @@ function updatePipelineHeader(stages: PipelineStage[]) {
             padding: 8px 4px;
             position: relative;
         `;
-      
+
         // Add count
         const count = document.createElement('div');
         count.textContent = '0';
@@ -491,14 +491,14 @@ function updatePipelineHeader(stages: PipelineStage[]) {
 
 function handleDragStart(e: DragEvent) {
     if (!e.target || !(e.target instanceof HTMLElement)) return;
-    
+
     // Add dragging class for visual feedback
     e.target.classList.add('dragging');
-    
+
     // Set the drag data
     const emailId = e.target.getAttribute('data-email-id');
     const sourceStageId = e.target.getAttribute('data-stage-id');
-    
+
     if (emailId && sourceStageId && e.dataTransfer) {
         e.dataTransfer.setData('application/json', JSON.stringify({
             emailId,
@@ -532,7 +532,7 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
 
         // Check for existing email
         const existingEmailInUI = emailsContainer.querySelector(`[data-email-id="${emailData.id}"]`);
-     //   console.log("Existing Email Data: ", existingEmailInUI)
+        //   console.log("Existing Email Data: ", existingEmailInUI)
         if (existingEmailInUI) {
             console.log('Email already displayed in UI, skipping render');
             return;
@@ -556,7 +556,7 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
         const emailDiv = document.createElement('div');
         emailDiv.className = 'pipeline-email';
         emailDiv.setAttribute('data-email-id', emailData.id);
-         // Add these attributes for drag and drop
+        // Add these attributes for drag and drop
         emailDiv.setAttribute('draggable', 'true');
         emailDiv.setAttribute('data-stage-id', stage.id);
         emailDiv.style.cssText = `
@@ -582,15 +582,15 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
             </div>
             <div style="flex: 1 1 100px; overflow: hidden; padding-right: 5px;" class="sender-cell">
                 ${typeof sender === 'string' ? sender : sender.short}
-                ${typeof sender === 'object' ? 
-                    `<button class="see-more-btn" style="color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;">see more</button>` 
-                    : ''}
+                ${typeof sender === 'object' ?
+                `<button class="see-more-btn" style="color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;">see more</button>`
+                : ''}
             </div>
             <div style="flex: 1; overflow: hidden;" class="subject-cell">
                 ${typeof subjectText === 'string' ? subjectText : subjectText.short}
-                ${typeof subjectText === 'object' ? 
-                    `<button class="see-more-btn" style="color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;">see more</button>` 
-                    : ''}
+                ${typeof subjectText === 'object' ?
+                `<button class="see-more-btn" style="color: #4299E1; font-size: 11px; border: none; background: none; cursor: pointer; padding: 0; margin-left: 4px;">see more</button>`
+                : ''}
             </div>
             <div style="flex: 0 0 100px; text-align: right; color: #6B7280;">
                 ${timestamp}
@@ -612,7 +612,7 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
             });
         });
 
-          // Add drag handlers
+        // Add drag handlers
         emailDiv.addEventListener('dragstart', handleDragStart);
         emailDiv.addEventListener('dragend', handleDragEnd);
         // Add hover effect
@@ -631,48 +631,48 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
         if (countElement) {
             const currentCount = parseInt(countElement.textContent || '0');
             countElement.textContent = (currentCount + 1).toString();
-           // console.log("Added Counts for Stages", countElement);
+            // console.log("Added Counts for Stages", countElement);
 
-               // Add this section to update header count
+            // Add this section to update header count
             const headerCount = document.querySelector(`.header-count-${stage.id}`);
             if (headerCount) {
                 headerCount.textContent = (currentCount + 1).toString();
                 console.log("Updated header count for stage", stage.id, "to", currentCount + 1);
             }
         }
-    } catch(error) {
+    } catch (error) {
         console.error('Error in addEmailToStage:', error);
     }
 }
 
 
-    // 5:11 AM on Friday the 10th 
-    
-        // Add this function to save email data to storage
+// 5:11 AM on Friday the 10th 
+
+// Add this function to save email data to storage
 // Update saveEmailToStage to include better error handling
 
-    /// Email Dragable Function
+/// Email Dragable Function
 
-    /*
-    The move button is now always created and positioned next to the checkbox
-    The button becomes visible on row hover instead of row selection
-    Added a simple icon (📋) to make it more compact
-    Added proper z-index to ensure the button stays above other elements
-    Added transition effects for smooth appearance/disappearance
-    Added checks to prevent duplicate buttons
-    Improved the initialization tracking
-    */
+/*
+The move button is now always created and positioned next to the checkbox
+The button becomes visible on row hover instead of row selection
+Added a simple icon (📋) to make it more compact
+Added proper z-index to ensure the button stays above other elements
+Added transition effects for smooth appearance/disappearance
+Added checks to prevent duplicate buttons
+Improved the initialization tracking
+*/
 
 
-    /**Simplified the selectors to better match Gmail's structure
-    Removed the opacity transition and hover effects (making buttons always visible)
-    Increased z-index to ensure buttons appear above Gmail's interface
-    Added more specific targeting for email elements
-    Added more debug logging
-    Fixed the observer logic
-    Added a delay after page load to ensure Gmail is fully initialized */
+/**Simplified the selectors to better match Gmail's structure
+Removed the opacity transition and hover effects (making buttons always visible)
+Increased z-index to ensure buttons appear above Gmail's interface
+Added more specific targeting for email elements
+Added more debug logging
+Fixed the observer logic
+Added a delay after page load to ensure Gmail is fully initialized */
 
-   function makeEmailDraggable(emailRow: HTMLElement) {
+function makeEmailDraggable(emailRow: HTMLElement) {
     // Verify this is actually an email row
     if (!emailRow.classList.contains('zA')) {
         console.log('Not an email row, skipping:', emailRow);
@@ -683,11 +683,11 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
         return;
     }
 
-        const moveButton = document.createElement('button');
-        moveButton.className = 'crm-move-button';
-        moveButton.innerHTML = '📋';
-        moveButton.title = 'Move to Pipeline';
-        moveButton.style.cssText = `
+    const moveButton = document.createElement('button');
+    moveButton.className = 'crm-move-button';
+    moveButton.innerHTML = '📋';
+    moveButton.title = 'Move to Pipeline';
+    moveButton.style.cssText = `
                    background: linear-gradient(90deg, 
             #4B5563 0%, 
             #60A5FA 20%, 
@@ -709,118 +709,118 @@ async function addEmailToStage(emailData: EmailData, stage: PipelineStage, stage
             opacity: 1;
         `;
 
-         // Create a new table cell for our button
-        const buttonCell = document.createElement('td');
-        buttonCell.style.cssText = `
+    // Create a new table cell for our button
+    const buttonCell = document.createElement('td');
+    buttonCell.style.cssText = `
             padding: 0 8px;
             width: 40px;
             vertical-align: middle;
             border: none;
         `;
-        buttonCell.appendChild(moveButton);
+    buttonCell.appendChild(moveButton);
 
-       
-        // Insert the new cell after the checkbox cell
-        const firstCell = emailRow.querySelector('td');
-        if (firstCell) {
-            firstCell.after(buttonCell);
-            console.log("Button inserted in Make Email Dragable")
-        }
 
-        moveButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Move button clicked');
-            const getEmailData = (): EmailData | null => {
-                // Get all table cells in the row
-                const cells = emailRow.querySelectorAll('td');
-                
-                // Find subject from the third cell typically
-                const subjectCell = Array.from(cells).find(cell => 
-                    cell.querySelector('[role="link"]') || 
-                    cell.querySelector('.bog') ||
-                    cell.querySelector('.bqe')
+    // Insert the new cell after the checkbox cell
+    const firstCell = emailRow.querySelector('td');
+    if (firstCell) {
+        firstCell.after(buttonCell);
+        console.log("Button inserted in Make Email Dragable")
+    }
+
+    moveButton.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Move button clicked');
+        const getEmailData = (): EmailData | null => {
+            // Get all table cells in the row
+            const cells = emailRow.querySelectorAll('td');
+
+            // Find subject from the third cell typically
+            const subjectCell = Array.from(cells).find(cell =>
+                cell.querySelector('[role="link"]') ||
+                cell.querySelector('.bog') ||
+                cell.querySelector('.bqe')
+            );
+            const subject = subjectCell?.textContent?.trim();
+
+            // Find sender from the relevant cell
+            // First try to find the email directly
+            let sender = emailRow.querySelector('[email]')?.getAttribute('email');
+            if (!sender) {
+                // If no email attribute, try to get the sender name/email from text content
+                const senderCell = Array.from(cells).find(cell =>
+                    cell.querySelector('.yP') || cell.querySelector('.bA4')
                 );
-                const subject = subjectCell?.textContent?.trim();
-    
-                // Find sender from the relevant cell
-                // First try to find the email directly
-                let sender = emailRow.querySelector('[email]')?.getAttribute('email');
-                if (!sender) {
-                    // If no email attribute, try to get the sender name/email from text content
-                    const senderCell = Array.from(cells).find(cell => 
-                        cell.querySelector('.yP') || cell.querySelector('.bA4')
-                    );
-                    sender = senderCell?.textContent?.trim();
-                }
-    
-                // Find timestamp from the last cell
-                const lastCell = cells[cells.length - 1];
-                const timeElement = lastCell?.querySelector('span[title]') || lastCell;
-                let timestamp = timeElement?.getAttribute('title') || 
-                                timeElement?.textContent?.trim();
-    
-                console.log('Raw extracted values:', {
-                    cells: cells.length,
-                    subject,
-                    sender,
-                    timestamp,
-                    rowHTML: emailRow.innerHTML
-                });
-    
-                // Clean up and validate the data
-                if (!subject || subject === '') {
-                    console.log('Missing subject');
-                    return null;
-                }
-    
-                // Ensure we have some form of sender identification
-                if (!sender || sender === '') {
-                    // Try to get any sender information from the row
-                    const anyNameOrEmail = emailRow.textContent?.match(/[\w.-]+@[\w.-]+\.\w+/)?.[0];
-                    sender = anyNameOrEmail || 'Unknown Sender';
-                }
-    
-                // Ensure we have some form of timestamp
-                if (!timestamp || timestamp === '') {
-                    // Use current date as fallback
-                    const now = new Date();
-                    timestamp = now.toLocaleString();
-                }
-    
-                const emailData: EmailData = {
-                    // Create a consistent ID by hashing the subject and sender
-                    id: `${subject}-${sender}`.replace(/[^a-zA-Z0-9]/g, ''),
-                    subject: subject,
-                    sender: sender,
-                    timestamp: timestamp
-                };
-            
-                console.log('Final processed email data:', emailData);
-                return emailData;
-            };
-    
-            const emailData = getEmailData();
-            if (emailData) {
-                console.log('Email data extracted:', emailData);
-                showStageSelectionPopup(emailData, e.clientX, e.clientY);
-            } else {
-                console.error('Failed to extract email data');
+                sender = senderCell?.textContent?.trim();
             }
-        });
+
+            // Find timestamp from the last cell
+            const lastCell = cells[cells.length - 1];
+            const timeElement = lastCell?.querySelector('span[title]') || lastCell;
+            let timestamp = timeElement?.getAttribute('title') ||
+                timeElement?.textContent?.trim();
+
+            console.log('Raw extracted values:', {
+                cells: cells.length,
+                subject,
+                sender,
+                timestamp,
+                rowHTML: emailRow.innerHTML
+            });
+
+            // Clean up and validate the data
+            if (!subject || subject === '') {
+                console.log('Missing subject');
+                return null;
+            }
+
+            // Ensure we have some form of sender identification
+            if (!sender || sender === '') {
+                // Try to get any sender information from the row
+                const anyNameOrEmail = emailRow.textContent?.match(/[\w.-]+@[\w.-]+\.\w+/)?.[0];
+                sender = anyNameOrEmail || 'Unknown Sender';
+            }
+
+            // Ensure we have some form of timestamp
+            if (!timestamp || timestamp === '') {
+                // Use current date as fallback
+                const now = new Date();
+                timestamp = now.toLocaleString();
+            }
+
+            const emailData: EmailData = {
+                // Create a consistent ID by hashing the subject and sender
+                id: `${subject}-${sender}`.replace(/[^a-zA-Z0-9]/g, ''),
+                subject: subject,
+                sender: sender,
+                timestamp: timestamp
+            };
+
+            console.log('Final processed email data:', emailData);
+            return emailData;
+        };
+
+        const emailData = getEmailData();
+        if (emailData) {
+            console.log('Email data extracted:', emailData);
+            showStageSelectionPopup(emailData, e.clientX, e.clientY);
+        } else {
+            console.error('Failed to extract email data');
+        }
+    });
 }
 
 // Update the showStageSelectionPopup function to properly pass the data
 // Add debug logging to track the flow
 function showStageSelectionPopup(emailData: EmailData, x: number, y: number) {
     console.log('Opening stage selection popup with data:', emailData);
-    
+
     // Remove any existing popups first
     const existingPopup = document.querySelector('.stage-selection-popup');
     if (existingPopup) {
         existingPopup.remove();
     }
-    
+
     // Find the button that was clicked (the parent element with crm-move-button class)
     const button = document.querySelector('.crm-move-button:hover');
     if (!button) {
@@ -874,7 +874,7 @@ function showStageSelectionPopup(emailData: EmailData, x: number, y: number) {
     chrome.storage.sync.get(['pipelineStages'], (result) => {
         console.log('Retrieved stages:', result.pipelineStages);
         const stages = result.pipelineStages || defaultStages;
-        
+
         stages.forEach(stage => {
             const option = document.createElement('div');
             option.style.cssText = `
@@ -890,7 +890,7 @@ function showStageSelectionPopup(emailData: EmailData, x: number, y: number) {
                 if (stageElement) {
                     await StorageUtils.saveEmailToStage(emailData, stage.id);
                     addEmailToStage(emailData, stage, stageElement as HTMLElement);
-                   
+
                 }
                 popup.remove();
                 document.removeEventListener('click', closePopup);
@@ -912,11 +912,11 @@ async function loadSavedEmails() {
     try {
         const stages = await chrome.storage.sync.get(['pipelineStages']);
         const currentStages = stages.pipelineStages || defaultStages;
-        
+
         for (const stage of currentStages) {
-          //  console.log("stage Called from loadSavedEmails", stage)
+            //  console.log("stage Called from loadSavedEmails", stage)
             const emails = await StorageUtils.loadStageEmails(stage.id);
-       //     console.log("Emails inside LoadSavedEmails:", emails);
+            //     console.log("Emails inside LoadSavedEmails:", emails);
             //It grabs the Div for Stages in Sidebar
             const stageElement = document.querySelector(`[data-stage-id="${stage.id}"]`);
             //console.log("Stage Element Called from the Load Saved emails", stageElement)
@@ -927,14 +927,14 @@ async function loadSavedEmails() {
                 if (countElement) {
                     console.log("Count Element Cleared")
                     countElement.textContent = '0';
-                      // Add this section to clear header count
+                    // Add this section to clear header count
                     const headerCount = document.querySelector(`.header-count-${stage.id}`);
                     if (headerCount) {
                         headerCount.textContent = '0';
                         console.log("Cleared header count for stage", stage.id);
                     }
                 }
-                
+
                 // Clear existing emails from UI
                 const emailsContainer = stageElement.querySelector('.stage-emails-container');
                 //console.log("Email Container Called within Stage Element Debug: ", emailsContainer)
@@ -959,7 +959,7 @@ async function cleanupStorage() {
         await chrome.storage.sync.clear();
         await chrome.storage.local.clear();
         console.log('Storage cleaned successfully');
-        
+
         // Reset to default stages
         await chrome.storage.sync.set({ pipelineStages: defaultStages });
         console.log('Default stages restored');
@@ -973,13 +973,13 @@ function observeGmailInbox() {
         console.log('Observer already initialized, skipping...');
         return;
     }
-    
+
     console.log('Starting Gmail observer...');
-    
+
     function initializeEmailRows() {
         // Only initialize rows that don't have buttons
         const emailRows = document.querySelectorAll('tr.zA:not([data-crm-initialized])');
-        
+
         if (emailRows.length > 0) {
             console.log(`Found ${emailRows.length} new email rows to initialize`);
             emailRows.forEach(row => {
@@ -999,7 +999,7 @@ function observeGmailInbox() {
             return;
         }
 
-       // Only create sidebar once
+        // Only create sidebar once
         // if (!observerState.sidebarCreated) {
         //     console.log('Found Gmail container, creating sidebar and observer');
         //     createSidebar();
@@ -1009,12 +1009,12 @@ function observeGmailInbox() {
         const observer = new MutationObserver((mutations) => {
             let shouldInitialize = false;
             mutations.forEach(mutation => {
-                if (mutation.addedNodes.length > 0 || 
+                if (mutation.addedNodes.length > 0 ||
                     mutation.type === 'childList') {
                     shouldInitialize = true;
                 }
             });
-            
+
             if (shouldInitialize) {
                 requestAnimationFrame(() => {
                     initializeEmailRows();
@@ -1031,7 +1031,7 @@ function observeGmailInbox() {
         requestAnimationFrame(() => {
             initializeEmailRows();
         });
-        
+
         observerState.isInitialized = true;
     };
 
@@ -1128,25 +1128,27 @@ function createPipelinePage() {
         const mainContent = document.querySelector('.bkK') as HTMLElement;
         if (mainContent) {
             mainContent.style.display = 'none';
-            
-            // Create pipeline page container
-            const pipelinePage = document.createElement('div');
-            pipelinePage.id = 'pipeline-page';
-            pipelinePage.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: white;
-                z-index: 1000;
-                overflow-y: auto;
-            `;
 
-            // Add back button
-            const backButton = document.createElement('button');
-            backButton.textContent = '← Back to Gmail';
-            backButton.style.cssText = `
+            // Create pipeline page container
+            const pipelinePage = document.querySelector('#pipeline-page') as HTMLElement;
+            if (!pipelinePage) {
+                const pipelinePage = document.createElement('div');
+                pipelinePage.id = 'pipeline-page';
+                pipelinePage.style.cssText = `
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: white;
+                    z-index: 1000;
+                    overflow-y: auto;
+                `;
+
+                // Add back button
+                const backButton = document.createElement('button');
+                backButton.textContent = '← Back to Gmail';
+                backButton.style.cssText = `
                 margin: 16px;
                 padding: 8px 16px;
                 border: none;
@@ -1154,30 +1156,33 @@ function createPipelinePage() {
                 border-radius: 4px;
                 cursor: pointer;
             `;
-            backButton.addEventListener('click', () => {
-                pipelinePage.remove();
-                mainContent.style.display = '';
-            });
+                backButton.addEventListener('click', () => {
+                    pipelinePage.style.display = 'none';
+                    mainContent.style.display = '';
+                });
 
-            pipelinePage.appendChild(backButton);
-            
-            // Add pipeline content
-            const pipelineContent = createPipelineContent();
-            pipelinePage.appendChild(pipelineContent);
-            
-            document.body.appendChild(pipelinePage);
+                pipelinePage.appendChild(backButton);
 
-            // Load stages and emails
-            chrome.storage.sync.get(['pipelineStages'], (result) => {
-                const stages = result.pipelineStages || defaultStages;
-                updatePipelineHeader(stages);
-                const stagesContainer = document.getElementById('pipeline-stages');
-                if (stagesContainer) {
-                    stages.forEach((stage) => {
-                        stagesContainer.appendChild(createStageElement(stage));
-                    });
-                }
-            });
+                // Add pipeline content
+                const pipelineContent = createPipelineContent();
+                pipelinePage.appendChild(pipelineContent);
+
+                document.body.appendChild(pipelinePage);
+
+                // Load stages and emails
+                chrome.storage.sync.get(['pipelineStages'], (result) => {
+                    const stages = result.pipelineStages || defaultStages;
+                    updatePipelineHeader(stages);
+                    const stagesContainer = document.getElementById('pipeline-stages');
+                    if (stagesContainer) {
+                        stages.forEach((stage) => {
+                            stagesContainer.appendChild(createStageElement(stage));
+                        });
+                    }
+                });
+            } else {
+                pipelinePage.style.display = 'block';
+            }
 
             // Load saved emails
             loadSavedEmails();
@@ -1301,12 +1306,12 @@ document.head.appendChild(styleSheet);
 // Add this to your initialization
 window.addEventListener('load', () => {
     console.log('Page loaded, initializing CRM...');
-   // createPipelineButton();
+    // createPipelineButton();
     addGlobalStyles();
-        // Clean storage before initialization
-        // cleanupStorage().then(() => {
-        //     setTimeout(observeGmailInbox, 1000);
-        // });
+    // Clean storage before initialization
+    // cleanupStorage().then(() => {
+    //     setTimeout(observeGmailInbox, 1000);
+    // });
 
     // Added periodic check to maintain buttons
     // const maintainButtons = () => {
@@ -1321,14 +1326,14 @@ window.addEventListener('load', () => {
 
     // // Initial setup with delay
     // setTimeout(observeGmailInbox, 1000);
-    
+
     // // Maintain buttons periodically
     // setInterval(maintainButtons, 2000);
-       // Initial setup with multiple retry attempts for first load
-       const initialSetup = () => {
+    // Initial setup with multiple retry attempts for first load
+    const initialSetup = () => {
         setTimeout(() => {
             observeGmailInbox();
-            
+
             // Specific first-load check for the first 10 rows
             const checkFirstRows = () => {
                 const firstRows = Array.from(document.querySelectorAll('tr.zA')).slice(0, 50);
@@ -1344,7 +1349,7 @@ window.addEventListener('load', () => {
             [100, 500, 1000, 2000].forEach(delay => {
                 setTimeout(checkFirstRows, delay);
             });
-            
+
             // Regular backup check continues
             setInterval(() => {
                 if (!document.querySelector('.crm-move-button')) {
@@ -1360,8 +1365,8 @@ window.addEventListener('load', () => {
     };
 
     initialSetup();
-   createPipelineButton();
-   setupButtonObserver();
+    createPipelineButton();
+    setupButtonObserver();
 });
 const init = () => {
     if (!window.location.origin.includes(GMAIL_URL_PATTERN)) {
