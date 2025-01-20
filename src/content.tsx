@@ -99,6 +99,26 @@ const StorageUtils = {
       console.error('Error removing email:', error);
       return false;
     }
+  },
+
+  async checkEmailStageStatus(email: string): Promise<{stageId: string, stageName: string, color: string} | null> {
+    const stages = await chrome.storage.sync.get(['pipelineStages']);
+    const pipelineStages = stages.pipelineStages || defaultStages;
+    
+    for (const stage of pipelineStages) {
+      const key = `stage_${stage.id}`;
+      const result = await chrome.storage.local.get([key]);
+      const emails = result[key] || [];
+      
+      if (emails.some(e => e.sender === email)) {
+        return {
+          stageId: stage.id,
+          stageName: stage.name,
+          color: stage.color
+        };
+      }
+    }
+    return null;
   }
 };
 
@@ -143,32 +163,57 @@ function makeEmailDraggable(emailRow: HTMLElement) {
   if (emailRow.querySelector('.crm-move-button')) {
     return;
   }
+  const emailElement = emailRow.querySelector('[email]');
+  const emailAddress = emailElement?.getAttribute('email');
 
   const moveButton = document.createElement('button');
   moveButton.className = 'crm-move-button';
   moveButton.innerHTML = '📋';
   moveButton.title = 'Move to Pipeline';
-  moveButton.style.cssText = `
-                   background: linear-gradient(90deg, 
+  if (emailAddress) {
+    StorageUtils.checkEmailStageStatus(emailAddress).then(stageInfo => {
+      if (stageInfo) {
+        moveButton.style.cssText = `
+          background: ${stageInfo.color};
+          color: white;
+          border: none;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          cursor: pointer;
+          margin-right: 8px;
+          position: relative;
+          z-index: 9999;
+          display: inline-block;
+          opacity: 1;
+        `;
+        moveButton.title = stageInfo.stageName;
+      } else {
+        moveButton.style.cssText = `
+          background: linear-gradient(90deg, 
             #4B5563 0%, 
             #60A5FA 20%, 
             #C084FC 40%, 
             #EF4444 60%, 
             #34D399 80%, 
             #FCD34D 100%
-        );
-            color: white;
-            border: none;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            margin-right: 8px;
-            position: relative;
-            z-index: 9999;
-            display: inline-block;
-            opacity: 1;
+          );
+          color: white;
+          border: none;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          cursor: pointer;
+          margin-right: 8px;
+          position: relative;
+          z-index: 9999;
+          display: inline-block;
+          opacity: 1;
         `;
+        moveButton.title = 'Move to Pipeline';
+      }
+    });
+  }
 
   // Create a new table cell for our button
   const buttonCell = document.createElement('td');
@@ -506,7 +551,7 @@ function setupButtonObserver() {
 }
 function createTableObserver() {
   const tableObserver = new MutationObserver((mutations) => {
-    console.log(`Processing ${mutations.length} mutations`);
+    //console.log(`Processing ${mutations.length} mutations`);
     
     // Check if any mutation affected the table structure
     const needsRefresh = mutations.some(mutation => 
@@ -518,11 +563,11 @@ function createTableObserver() {
     if (needsRefresh) {
       // Get all rows again to ensure we haven't missed any
       const allRows = document.querySelectorAll('tr.zA');
-      console.log(`Total rows found: ${allRows.length}`);
+     // console.log(`Total rows found: ${allRows.length}`);
       
       allRows.forEach(row => {
         if (!row.querySelector('.crm-move-button')) {
-          console.log('Reinitializing missing button on row');
+         // console.log('Reinitializing missing button on row');
           makeEmailDraggable(row as HTMLElement);
         }
       });
