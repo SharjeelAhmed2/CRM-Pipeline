@@ -84,8 +84,8 @@
 
     pipelineOverview.innerHTML = '';
     stages.forEach(stage => {
-      const segment = document.createElement('div');
-      segment.style.cssText = `
+        const segment = document.createElement('div');
+        segment.style.cssText = `
             flex: 1;
             display: flex;
             flex-direction: column;
@@ -94,37 +94,38 @@
             text-align: center;
             padding: 8px 4px;
             position: relative;
+            background-color: ${stage.color};
         `;
 
-      // Add count
-      const count = document.createElement('div');
-      count.textContent = '0';
-      count.className = `header-count-${stage.id}`;
-      count.style.cssText = `
+        // Add count
+        const count = document.createElement('div');
+        count.textContent = '0';
+        count.className = `header-count-${stage.id}`;
+        count.style.cssText = `
             font-size: 18px;
             font-weight: bold;
             margin-bottom: 4px;
         `;
 
-      // Add stage name
-      const name = document.createElement('div');
-      name.textContent = stage.name;
-      name.style.cssText = `
+        // Add stage name
+        const name = document.createElement('div');
+        name.textContent = stage.name;
+        name.style.cssText = `
             font-size: 20px;
             line-height: 1.2;
             font-weight: 200;
-            padding: 10px
+            padding: 10px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 100%;
         `;
 
-      segment.appendChild(count);
-      segment.appendChild(name);
-      pipelineOverview.appendChild(segment);
+        segment.appendChild(count);
+        segment.appendChild(name);
+        pipelineOverview.appendChild(segment);
     });
-  }
+}
 
   function createStageElement(stage: PipelineStage) {
     const stageDiv = document.createElement('div');
@@ -667,20 +668,12 @@ async function deleteOne(emailId: string, stageId: string, stageDiv: HTMLElement
     const pipelineOverview = document.createElement('div');
     pipelineOverview.id = 'pipeline-overview';
     pipelineOverview.style.cssText = `
-            display: flex;
-            width: 100%;
-            height: fit-content;
-            background: linear-gradient(90deg, 
-                #4B5563 0%, 
-                #60A5FA 20%, 
-                #C084FC 40%, 
-                #EF4444 60%, 
-                #34D399 80%, 
-                #FCD34D 100%
-            );
-            color: white;
-            font-size: 13px;
-        `;
+        display: flex;
+        width: 100%;
+        height: fit-content;
+        color: white;
+        font-size: 13px;
+    `;
 
     // Content section
     const contentSection = document.createElement('div');
