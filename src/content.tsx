@@ -168,7 +168,7 @@ function makeEmailDraggable(emailRow: HTMLElement) {
 
   const moveButton = document.createElement('button');
   moveButton.className = 'crm-move-button';
-  moveButton.innerHTML = '📋';
+  moveButton.innerHTML = `<img src=${iconUrl} style="height: 15px;"></img>`;
   moveButton.title = 'Move to Pipeline';
   if (emailAddress) {
     StorageUtils.checkEmailStageStatus(emailAddress).then(stageInfo => {
@@ -190,14 +190,7 @@ function makeEmailDraggable(emailRow: HTMLElement) {
         moveButton.title = stageInfo.stageName;
       } else {
         moveButton.style.cssText = `
-          background: linear-gradient(90deg, 
-            #4B5563 0%, 
-            #60A5FA 20%, 
-            #C084FC 40%, 
-            #EF4444 60%, 
-            #34D399 80%, 
-            #FCD34D 100%
-          );
+          background: white;
           color: white;
           border: none;
           padding: 4px 8px;
@@ -517,7 +510,7 @@ function createPipelineButton() {
 
   // Button content
   buttonContainer.innerHTML = `
-        <div style="margin-right: 12px;">📈</div>
+        <img src=${iconUrl} style="margin-right: 12px; height: 17px;"></img>
         <div style="font-size: 14px; font-weight: bolder">Boxy</div>
     `;
 
@@ -613,6 +606,9 @@ function monitorTableBody() {
     }
   }, 2000);
 }
+
+const iconUrl = chrome.runtime.getURL("icon128.png");
+
 const addGlobalStyles = () => {
   const style = document.createElement('style');
   style.textContent = `

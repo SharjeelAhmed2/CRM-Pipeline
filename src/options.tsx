@@ -85,6 +85,7 @@
     pipelineOverview.innerHTML = '';
     stages.forEach(stage => {
         const segment = document.createElement('div');
+        segment.id = `header-${stage.name.replaceAll(' ', '-')}`;
         segment.style.cssText = `
             flex: 1;
             display: flex;
@@ -173,7 +174,7 @@
               gap: 8px;
               min-width: 80px;
           ">
-              <span>${stage.name}</span>
+              <span id="${stage.name}">${stage.name}</span>
               <span class="stage-count" style="
                   background: rgba(255, 255, 255, 0.2);
                   padding: 2px 6px;
@@ -215,15 +216,37 @@
     // Add collapse/expand functionality
     const arrow = headerDiv.querySelector('span');
     headerDiv.addEventListener('click', (e) => {
-      // Ignore clicks on delete button
+      const target = e.target as HTMLElement;
+    
+      const selected = target.querySelector('span[id]');
+
+      if (target instanceof HTMLElement) {
+        if (selected) {
+          console.log('Span content:', selected.textContent);
+          const card = document.querySelector(`#header-${selected.textContent?.trim().replaceAll(' ', '-')}`) as HTMLElement;
+          if (card) {
+            const isExpanded = emailsContainer.style.display !== 'none';
+            card.style.flex = isExpanded ? "1 1 0%" : "2 1 0%";
+          }
+        } else {
+          console.log('No span element found!');
+        }
+      }
+    
       if (!(e.target as HTMLElement).closest('.delete-stage')) {
         const isExpanded = emailsContainer.style.display !== 'none';
         emailsContainer.style.display = isExpanded ? 'none' : 'flex';
         if (arrow) {
           arrow.style.transform = isExpanded ? 'rotate(-90deg)' : 'rotate(0deg)';
         }
+    
+        const card = document.querySelector(`#header-${selected?.textContent?.trim().replaceAll(' ', '-')}`) as HTMLElement;
+        if (card) {
+          card.style.flex = isExpanded ? "1 1 0%" : "2 1 0%";
+        }
       }
     });
+    
 
     // Add existing delete functionality
     const deleteBtn = headerDiv.querySelector('.delete-stage');
