@@ -124,82 +124,6 @@ function decompressEmailData(stored: StoredEmailData): EmailData {
   };
 }
 
-// 4. Implement drop zone handlers
-function handleDragOver(e: DragEvent) {
-  e.preventDefault();
-  if (e.dataTransfer) {
-    e.dataTransfer.dropEffect = 'move';
-  }
-}
-
-function handleDragEnter(e: DragEvent) {
-  e.preventDefault();
-  if (e.target instanceof HTMLElement) {
-    e.target.classList.add('drag-over');
-  }
-}
-
-function handleDragLeave(e: DragEvent) {
-  if (e.target instanceof HTMLElement) {
-    e.target.classList.remove('drag-over');
-  }
-}
-
-async function handleDrop(e: DragEvent) {
-  e.preventDefault();
-  if (!e.target || !(e.target instanceof HTMLElement)) return;
-
-  // Remove drag-over styling
-  e.target.classList.remove('drag-over');
-
-  if (!e.dataTransfer) return;
-
-  try {
-    // Get the dragged email data
-    const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
-    const { emailId, sourceStageId } = dragData;
-
-    // Find the target stage
-    const targetStageElement = (e.target as HTMLElement).closest('.pipeline-stage');
-    if (!targetStageElement) return;
-
-    const targetStageId = targetStageElement.getAttribute('data-stage-id');
-    if (!targetStageId || targetStageId === sourceStageId) return;
-
-    // Get email data from source stage
-    const sourceEmails = await StorageUtils.loadStageEmails(sourceStageId);
-    const emailToMove = sourceEmails.find(email => email.id === emailId);
-
-    if (!emailToMove) return;
-    // Remove email from source stage storage
-    await chrome.storage.local.set({ [`stage_${sourceStageId}`]: sourceEmails.filter(email => email.id !== emailId) });
-
-    const filteredEmails = sourceEmails.filter(email => email.id !== emailId);
-    // Remove from source stage
-    for (const email of filteredEmails) {
-      await StorageUtils.saveEmailToStage(email, sourceStageId);
-    }
-    // Add to target stage
-    const targetEmails = await StorageUtils.loadStageEmails(targetStageId);
-    await chrome.storage.local.set({ [`stage_${targetStageId}`]: [...targetEmails, emailToMove] });
-
-    //const existingEmails = await StorageUtils.loadStageEmails(targetStageId);
-    const updatedEmails = [...targetEmails, emailToMove];
-
-    for (const email of updatedEmails) {
-      await StorageUtils.saveEmailToStage(email, targetStageId);
-    }
-    // Add to target stage
-    // await StorageUtils.saveEmailToStage(targetStageId, [
-    //     ...(await StorageUtils.loadStageEmails(targetStageId)),
-    //     emailToMove
-    // ]);
-
-  } catch (error) {
-    console.error('Error during drop:', error);
-  }
-}
-
 
 /**Simplified the selectors to better match Gmail's structure
 Removed the opacity transition and hover effects (making buttons always visible)
@@ -580,6 +504,70 @@ function setupButtonObserver() {
     subtree: true
   });
 }
+function createTableObserver() {
+  const tableObserver = new MutationObserver((mutations) => {
+    console.log(`Processing ${mutations.length} mutations`);
+    
+    // Check if any mutation affected the table structure
+    const needsRefresh = mutations.some(mutation => 
+      mutation.type === 'childList' || 
+      (mutation.type === 'attributes' && mutation.target instanceof HTMLElement && 
+       mutation.target.classList.contains('zA'))
+    );
+
+    if (needsRefresh) {
+      // Get all rows again to ensure we haven't missed any
+      const allRows = document.querySelectorAll('tr.zA');
+      console.log(`Total rows found: ${allRows.length}`);
+      
+      allRows.forEach(row => {
+        if (!row.querySelector('.crm-move-button')) {
+          console.log('Reinitializing missing button on row');
+          makeEmailDraggable(row as HTMLElement);
+        }
+      });
+    }
+  });
+
+  return tableObserver;
+}
+function monitorTableBody() {
+  const observer = createTableObserver();
+  
+  const observeTable = () => {
+    // Try multiple possible table body selectors that Gmail uses
+    const tableBody = document.querySelector('.F.cf.zt, .AO, .ain table tbody');
+    if (tableBody) {
+      console.log('Found table body, attaching observer');
+      observer.observe(tableBody, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        characterData: true
+      });
+      
+      // Force initial check of all rows
+      const allRows = document.querySelectorAll('tr.zA');
+      allRows.forEach(row => {
+        if (!row.querySelector('.crm-move-button')) {
+          makeEmailDraggable(row as HTMLElement);
+        }
+      });
+    }
+  };
+
+  observeTable();
+  
+  // Backup periodic check
+  setInterval(() => {
+    const buttons = document.querySelectorAll('.crm-move-button');
+    console.log(`Periodic check - Current button count: ${buttons.length}`);
+    if (buttons.length === 0) {
+      console.log('No buttons found, re-running observation');
+      observeTable();
+    }
+  }, 2000);
+}
 const addGlobalStyles = () => {
   const style = document.createElement('style');
   style.textContent = `
@@ -589,14 +577,17 @@ const addGlobalStyles = () => {
         }
         
         /* Ensure proper alignment of all cells */
-        .zA > td {
-            padding: 0 8px;
+        .zA[data-crm-initialized] {
+          opacity: 1 !important;
+          visibility: visible !important;
         }
         
         /* Style for our new column */
         .crm-move-button {
-            opacity: 0;
-            transition: opacity 0.2s;
+          opacity: 0;
+          transition: opacity 0.2s;
+          will-change: opacity;
+          contain: layout style;
         }
         
         .zA:hover .crm-move-button {
@@ -611,42 +602,6 @@ window.addEventListener('load', () => {
   console.log('Page loaded, initializing CRM...');
   // createPipelineButton();
   addGlobalStyles();
-  // Initial setup with multiple retry attempts for first load
-  const initialSetup = () => {
-    setTimeout(() => {
-      observeGmailInbox();
-
-      // Specific first-load check for the first 10 rows
-      const checkFirstRows = () => {
-        const firstRows = Array.from(document.querySelectorAll('tr.zA')).slice(0, 50);
-        firstRows.forEach(row => {
-          if (!row.querySelector('.crm-move-button')) {
-            makeEmailDraggable(row as HTMLElement);
-            row.setAttribute('data-crm-initialized', 'true');
-          }
-        });
-      };
-
-      // Multiple checks for the first 10 rows during initial load
-      [100, 500, 1000, 2000].forEach(delay => {
-        setTimeout(checkFirstRows, delay);
-      });
-
-      // Regular backup check continues
-      setInterval(() => {
-        if (!document.querySelector('.crm-move-button')) {
-          console.log('Buttons missing, reinitializing...');
-          const rows = document.querySelectorAll('tr.zA:not([data-crm-initialized])');
-          rows.forEach(row => {
-            makeEmailDraggable(row as HTMLElement);
-            row.setAttribute('data-crm-initialized', 'true');
-          });
-        }
-      }, 5000);
-    }, 1000);
-  };
-
-  initialSetup();
   createPipelineButton();
   setupButtonObserver();
 });
@@ -655,9 +610,8 @@ const init = () => {
     return;
   }
   console.log('Gmail detected, starting observer');
+  monitorTableBody();
   observeGmailInbox();
-  createPipelineButton();
-  setupButtonObserver();
 };
 
 // Start when page loads
